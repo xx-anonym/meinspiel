@@ -315,7 +315,7 @@ b { font-weight: 700; }
 .k-titel.mittel { font-size: 13.5cqw; }
 .k-titel.lang { font-size: 11.5cqw; }
 .k-komp { font-size: 10.5cqw; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #7a2030; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.k-epoche { font-size: 9cqw; color: var(--tinte-m); line-height: 1.2; margin-top: 1cqw; }
+.k-epoche { font-size: 9.5cqw; color: var(--tinte-m); line-height: 1.2; margin-top: 1cqw; white-space: nowrap; }
 .k-fuss { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-top: 2cqw; font-size: 10.5cqw; color: var(--tinte-m); }
 .k-jahr { font-weight: 700; color: var(--tinte); font-variant-numeric: tabular-nums; }
 .k-akte { letter-spacing: -.5cqw; color: #7a2030; font-size: 11cqw; line-height: 1; }
@@ -332,10 +332,12 @@ b { font-weight: 700; }
 .enh-xmult { box-shadow: 0 0 0 2px #b04ac2, 0 4px 14px rgba(176, 74, 194, .4); }
 
 /* Schmale Karten: Epoche als Ziffer */
-@container (max-width: 84px) {
+/* Den Epochennamen zeigen, solange er passt; nur sehr kleine Karten (Bühne,
+   Repertoire-Übersicht) weichen auf die römische Ziffer aus. */
+@container (max-width: 63px) {
   .k-epoche .lang { display: none; }
 }
-@container (min-width: 85px) {
+@container (min-width: 64px) {
   .k-epoche .kurz { display: none; }
 }
 
