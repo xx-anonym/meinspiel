@@ -1,8 +1,6 @@
-// Da capo! – Klang. Alles synthetisiert, keine Dateien.
-//
-// Jedes gezählte Werk spielt den nächsten Ton von Papagenos Panflöte
-// (d–e–fis–g–a, wie im „Vogelfänger“), Faktoren bekommen Pauke und Blech,
-// am Ende klatscht das Haus – je größer der Abend, desto dichter.
+// Besetzung – Klang. Alles synthetisiert, keine Dateien: Gong vor dem Abend,
+// Applaus aus einzelnen Klatschern, Buhrufe aus Vokalformanten, Blech für
+// Standing Ovations und eine leise Spieluhr im Dreivierteltakt.
 
 let ac = null;
 let master = null, sfx = null, mus = null, rauschen = null, hall = null;

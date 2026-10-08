@@ -1,94 +1,76 @@
-# Da capo!
+# Besetzung
 
-Ein Opern-Roguelike für den Browser. Du bist Intendant, stellst aus deinem
-Repertoire Abend für Abend ein Programm zusammen und tourst von der Oper
-Leipzig bis auf den Grünen Hügel. Am Ende jeder Spielzeit steht eine Kritik
-im Stil eines OpernLog-Eintrags – und dann: noch einmal von vorn.
-
-Die Mechanik ist von Balatro inspiriert, der Inhalt ist Oper: Die 121 Werke
-stammen aus dem OpernLog-Katalog, mit echten Entstehungsjahren, Akten und
-Sprachen.
+Ein Ensemble-Roguelite für den Browser. Du leitest das Ensemble der Oper
+Leipzig durch eine Spielzeit: Wer singt die Tosca, wer schont die Stimme für
+die Wagner-Festtage, wer springt ein, wenn der Tenor um 19:12 Uhr absagt?
 
 Reines HTML, CSS und JavaScript (ES-Module). Kein Framework, kein Build-Schritt.
 
 ## Spielen
-
-Lokal reicht ein beliebiger statischer Server:
 
 ```bash
 python3 -m http.server 8000
 # dann http://localhost:8000 öffnen
 ```
 
-Auf dem Handy lässt es sich zum Home-Bildschirm hinzufügen und läuft dann
-auch offline (Service Worker).
+Auf dem Handy lässt es sich zum Home-Bildschirm hinzufügen und läuft dann auch
+offline.
 
-## So geht's
+## So geht’s
 
-- Du ziehst acht Werke. Wähle bis zu fünf und führe sie auf.
-- **Applaus = Publikum × Begeisterung.** Das Programm liefert die Grundwerte,
-  jedes gezählte Werk bringt seinen Ruhm als Publikum mit.
-- Jede Station hat drei Abende: Premiere, Gala und Kritikerabend. Am
-  Kritikerabend gilt eine Sonderregel („Der Purist: Werke nach 1900 zählen
-  nicht“).
-- Zwischen den Abenden geht es ins Foyer: Stars engagieren, Rezensionen
-  kaufen, Werke proben, Pakete öffnen, investieren.
+Eine Spielzeit hat acht Wochen mit je zwei Vorstellungen, danach das
+Saisonfinale (in Leipzig die Wagner-Festtage). Sinkt der Ruf auf null, beruft
+dich der Stadtrat ab.
 
-### Programme
+- **Spielplan:** Jede Woche wählst du zwei von drei Opern. Farbpunkte an den
+  Fächern zeigen, ob dein Ensemble sie abdeckt.
+- **Besetzung:** Für jede Rolle eine Stimme. Vor dem Abend siehst du pro Rolle,
+  was sie bringt, wie viel Stimme sie kostet und wie hoch das Kiekser-Risiko ist.
+- **Vorstellung:** Kurz vor Beginn kann jemand absagen – Einspringer aus dem
+  Ensemble, Gast einfliegen oder „singt trotzdem“. Die Summe gegen das Ziel
+  entscheidet über Buhrufe, Bravi oder Standing Ovations.
+- **Wochenende:** Kasse, ein Ereignis mit einer Entscheidung, Vorsingen und ein
+  Angebot (Meisterkurs, Stimmkur, Unterricht).
 
-| Programm | Bedingung | Grundwert |
-| --- | --- | --- |
-| Solo-Arie | kein Muster | 5 × 1 |
-| Doppelabend | 2 Werke eines Komponisten | 10 × 2 |
-| Zwei Doppelabende | 2 + 2 | 20 × 2 |
-| Nationalabend | 5 Werke einer Schule | 30 × 3 |
-| Komponistenabend | 3 Werke eines Komponisten | 40 × 3 |
-| Zeitreise | 5 verschiedene Jahrzehnte innerhalb von sieben | 35 × 4 |
-| Festspielwoche | 3 + 2 | 40 × 4 |
-| Werkschau | 4 Werke eines Komponisten | 60 × 7 |
-| Große Zeitreise | Zeitreise in einer Schule | 100 × 8 |
-| Gesamtwerk | 5 Werke eines Komponisten | 120 × 12 |
+### Was eine Stimme bringt
 
-Passen mehrere, spielt das Haus die stärkste Lesart.
+| Faktor | Wirkung |
+| --- | --- |
+| Sterne (1–5) | Grundwert 35 bis 85 |
+| Gewicht der Rolle | Hauptpartie 100 %, Partie 60 %, Nebenpartie 30 % |
+| Fach | eigenes ×1, Nachbarfach ×0,75, fachfremd ×0,35 (plus Kiekser-Risiko) |
+| Stimme | 100 % → ×1, 0 % → ×0,55; unter 60 % steigt das Kiekser-Risiko |
+| Anforderungen | Höhe, Koloratur, Tiefe, Spiel, Ausdauer: passende Eigenschaft +20 % |
+| Stil | Mozart-, Verdi-, Wagnerstimme … im passenden Repertoire +20 % |
+| Rollenkenntnis | +10 % je Wiederholung, bis +30 % |
+
+Die vierzehn Fächer folgen dem deutschen Fachsystem, vereinfacht: Soubrette,
+Koloratursopran, lyrischer, jugendlich-dramatischer und dramatischer Sopran,
+Mezzo/Alt, Spiel-, lyrischer, jugendlicher Helden- und Heldentenor, lyrischer
+Bariton, Helden-/Charakterbariton, seriöser Bass, Bassbuffo.
 
 ## Was drinsteckt
 
-- **121 Werke** von Monteverdi bis Muhly, in fünf Schulen (ITA, DEU, FRA, OST, ENG)
-- **49 Stars** – Callas, Caruso, Toscanini, Karajan, Ludwig II., Cosima, Da Ponte,
-  das Gewandhausorchester, das Leipziger Allerlei, das Silvester-Orakel …
-- **16 Sternstunden** zum Entdecken: Ring, Trilogia popolare, Da-Ponte-Trilogie,
-  Cav/Pag, Il trittico, „Uraufgeführt in Leipzig“ und mehr
-- **17 Kritiker** plus zwei Finalgegner in Bayreuth
-- **10 Rezensionen** (LVZ bis Deutschlandfunk Kultur), **11 Proben**, **9 Investitionen**
-- **6 Startrepertoires** zum Freischalten und **5 Strengestufen**
-- **Spielplan des Tages**: ein Lauf mit festem Zufall, für alle gleich
-- **Werkverzeichnis** über alle Läufe: gespielte Werke, Sternstunden, Stars, Statistik
-- Endlos-Modus mit Gastspielen nach dem Sieg
-- Synthetisierter Klang: Papagenos Panflöte für jedes gezählte Werk, Pauken für
-  Faktoren, Applaus aus Rauschen, Buhrufe fürs Regietheater, eine Spieluhr-Musik
-
-## Steuerung
-
-| Aktion | Touch / Maus | Tastatur |
-| --- | --- | --- |
-| Werk wählen | antippen | `1`–`9` |
-| Aufführen | Knopf | `Enter` |
-| Umbesetzen | Knopf | `U` |
-| Sortierung wechseln | Knopf | `S` |
-| Werk-Details | lange drücken / Rechtsklick | – |
-| Programme | Listen-Symbol | `P` |
-| Menü / schließen | Menü-Symbol | `Esc` |
+- **49 Opern** mit ihren Rollen, Fächern, Anforderungen und Belastung – von der
+  Zauberflöte bis Peter Grimes, mit den Leipziger Uraufführungen von Lortzing
+  und Weill
+- **4 Häuser:** Oper Leipzig, Semperoper (Strauss-Tage), Wiener Staatsoper
+  (Festwochen), Bayreuth (nur Wagner, am Ende der ganze Ring)
+- **Kammersänger:** Nach einer überstandenen Spielzeit ernennst du eine Stimme;
+  sie kehrt in späteren Spielzeiten manchmal als Gast zurück
+- **Spielplan des Tages** mit festem Zufall, **Archiv** mit Rollenbuch über alle
+  Spielzeiten
+- Synthetisierter Klang: Gong, Applaus aus einzelnen Klatschern, Buhrufe, Blech
 
 ## Dateien
 
 | Datei | Inhalt |
 | --- | --- |
-| `index.html` | Gerüst |
-| `style.css` | Gestaltung (Samt, Gold, Programmzettel) |
-| `js/data.js` | Kataloge: Werke, Programme, Stars, Kritiker, Häuser |
-| `js/logic.js` | Spiellogik ohne DOM, mit eigenem Zufallsgenerator |
-| `js/main.js` | Oberfläche, Animationen, Eingabe |
-| `js/audio.js` | Klang und Musik (Web Audio) |
-| `js/fx.js` | Rosen, Goldstaub, Konfetti |
-| `js/speicher.js` | Speicherstand im Browser |
-| `tools/sim.mjs` | Balance-Simulation (`node tools/sim.mjs leipzig 100`) |
+| `js/daten.js` | Fächer, Eigenschaften, Opern mit Rollen, Häuser, Namen |
+| `js/spiel.js` | Spiellogik ohne DOM, mit eigenem Zufallsgenerator |
+| `js/main.js` | Oberfläche |
+| `js/audio.js` | Klang (Web Audio) |
+| `js/speicher.js` | Spielstand und Archiv im Browser |
+| `tools/sim.mjs` | Balance-Simulation (`node tools/sim.mjs leipzig 300`) |
+
+Das Vorgängerspiel „Da capo!“ liegt in der Git-Historie dieses Branches.

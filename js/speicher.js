@@ -1,11 +1,10 @@
-// Da capo! – Speicherstand im Browser: der laufende Lauf, das Werkverzeichnis
-// über alle Läufe und die Einstellungen.
+// Besetzung – Speicherstand im Browser: laufende Spielzeit, Archiv, Einstellungen.
 
-import { REPERTOIRES, STERNSTUNDEN } from './data.js';
+import { HAEUSER } from './daten.js';
 
-const LAUF = 'dacapo.lauf.v1';
-const META = 'dacapo.meta.v1';
-const EINST = 'dacapo.einstellungen.v1';
+const LAUF = 'besetzung.lauf.v1';
+const META = 'besetzung.archiv.v1';
+const EINST = 'besetzung.einstellungen.v1';
 
 function lesen(key) {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
@@ -14,43 +13,27 @@ function schreiben(key, wert) {
   try { localStorage.setItem(key, JSON.stringify(wert)); } catch (e) { /* ohne Speicher weiterspielen */ }
 }
 
-export function ladeLauf() { return lesen(LAUF); }
-export function speichereLauf(run) { schreiben(LAUF, run); }
+export const ladeLauf = () => lesen(LAUF);
+export const speichereLauf = (run) => schreiben(LAUF, run);
 export function loescheLauf() { try { localStorage.removeItem(LAUF); } catch (e) { /* egal */ } }
 
-const META_LEER = () => ({
-  v: 1,
-  laeufe: 0, siege: 0, besteStation: 0, besteVorstellung: 0, besteArt: null,
-  werke: {}, sternstunden: {}, stars: {}, programme: {}, komponisten: {},
-  frei: { leipzig: true }, strengeFrei: 1, siegeJeDeck: {}, taeglich: {},
-  vorstellungen: 0, neu: [],
+const LEER = () => ({
+  v: 1, laeufe: 0, siege: {}, besterRuf: {}, legenden: [], rollenbuch: {}, opern: {},
+  taeglich: {}, frei: { leipzig: true }, abende: 0, ovationen: 0, kiekser: 0,
 });
-
-export function ladeMeta() {
+export function ladeArchiv() {
   const m = lesen(META) || {};
-  const leer = META_LEER();
-  return { ...leer, ...m, frei: { ...leer.frei, ...(m.frei || {}) } };
+  const l = LEER();
+  return { ...l, ...m, frei: { ...l.frei, ...(m.frei || {}) } };
 }
-export function speichereMeta(meta) { schreiben(META, meta); }
+export const speichereArchiv = (m) => schreiben(META, m);
 
-export function ladeEinst() {
-  return { ton: true, musik: true, tempo: 1, wackeln: true, ...(lesen(EINST) || {}) };
-}
-export function speichereEinst(e) { schreiben(EINST, e); }
+export function ladeEinst() { return { ton: true, musik: false, tempo: 1, ...(lesen(EINST) || {}) }; }
+export const speichereEinst = (e) => schreiben(EINST, e);
 
-/** Prüft Freischaltungen und gibt die neu freigeschalteten Repertoires zurück. */
-export function pruefeFreischaltungen(meta) {
-  const neu = [];
-  const stern = Object.keys(meta.sternstunden).filter((k) => STERNSTUNDEN.some((s) => s.id === k)).length;
-  const werke = Object.keys(meta.werke).length;
-  for (const r of REPERTOIRES) {
-    if (meta.frei[r.id] || !r.frei) continue;
-    const f = r.frei;
-    const ok = (f.art === 'station' && meta.besteStation >= f.wert)
-      || (f.art === 'sieg' && meta.siege >= f.wert)
-      || (f.art === 'sternstunden' && stern >= f.wert)
-      || (f.art === 'werke' && werke >= f.wert);
-    if (ok) { meta.frei[r.id] = true; neu.push(r); }
-  }
-  return neu;
+/** Schaltet nach einem Sieg das nächste Haus frei. Gibt das neue Haus zurück. */
+export function freischalten(archiv, gewonnenIn) {
+  const neu = HAEUSER.find((h) => h.frei === gewonnenIn && !archiv.frei[h.id]);
+  if (neu) archiv.frei[neu.id] = true;
+  return neu || null;
 }
