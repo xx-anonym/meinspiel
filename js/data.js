@@ -306,6 +306,20 @@ export const STARS = [
   { id: 'opernfuehrer', name: 'Reclams Opernführer', rar: 3, preis: 8, icon: 'book', text: 'Sternstunden zählen zusätzlich {x:×2}. Fehlende Werke deiner Sternstunden tauchen öfter im Foyer auf.' },
   { id: 'hustenbonbon', name: 'Hustenbonbons', rar: 3, preis: 8, icon: 'candy', text: 'Die Regeln der Kritiker gelten nicht.' },
 ];
+// Kurznamen für schmale Karten (Handy).
+const STAR_KURZ = {
+  claque: 'Claque', caruso: 'Caruso', lehmann: 'Lehmann', calve: 'Calvé', schaljapin: 'Schaljapin', pears: 'Pears',
+  souffleur: 'Souffleur', abonnent: 'Abonnent', dramaturgin: 'Drama\u00adturgin', lokalpatriot: 'Lokal\u00adpatriot',
+  platzanweiserin: 'Platz\u00adanweiserin', abendkasse: 'Abend\u00adkasse', gewandhaus: 'Gewand\u00adhaus', allerlei: 'Allerlei',
+  kurz: 'Kurz & bündig', sitzfleisch: 'Sitz\u00adfleisch', buffo: 'Buffo', kassenschlager: 'Kassen\u00adschlager', maezen: 'Mäzen',
+  garderobiere: 'Garde\u00adrobiere', pausensekt: 'Sekt', inspizient: 'Inspi\u00adzient', daponte: 'Da Ponte', boito: 'Boito',
+  hofmannsthal: 'Hofmanns\u00adthal', illica: 'Illica', ricordi: 'Ricordi', ludwig: 'Ludwig II.', melchior: 'Melchior',
+  stammpublikum: 'Stamm\u00adpublikum', zugabe: 'Zugabe!', dacapo: 'Da capo!', raritaeten: 'Raritäten', orakel: 'Orakel',
+  fraktion: 'Fraktion', regietheater: 'Regie\u00adtheater', prisma: 'Prisma', opernglas: 'Opern\u00adglas', ausschuss: 'Aus\u00adschuss',
+  pavarotti: 'Nessun dorma', generalprobe: 'General\u00adprobe', callas: 'Callas', cosima: 'Cosima', toscanini: 'Toscanini',
+  karajan: 'Karajan', kino: 'Kino', intendant: 'Intendant', opernfuehrer: 'Reclam', hustenbonbon: 'Bonbons',
+};
+for (const s of STARS) s.kurz = STAR_KURZ[s.id] || s.name;
 export const STAR = Object.fromEntries(STARS.map((s) => [s.id, s]));
 export const RARITAET = { 1: 'Ensemble', 2: 'Solist', 3: 'Legende' };
 
@@ -342,6 +356,12 @@ export const PROBEN = [
   { id: 'opernstudio', name: 'Opernstudio', ziel: null, text: 'Bildet einen zufälligen Star aus (Ensemble oder Solist), wenn ein Platz frei ist.' },
   { id: 'vorschau', name: 'Spielzeitvorschau', ziel: null, text: 'Zwei zufällige Programme steigen um je eine Stufe.' },
 ];
+const PROBE_KURZ = {
+  neuinszenierung: 'Neu\u00adinsz.', starbesetzung: 'Star\u00adbes.', festspielfassung: 'Festspiel', schallplatte: 'Gold',
+  uebersetzung: 'Über\u00adsetz.', streichung: 'Strei\u00adchung', wiederaufnahme: 'Kopie', spielplanaenderung: 'Tausch',
+  benefiz: 'Benefiz', opernstudio: 'Studio', vorschau: 'Vor\u00adschau',
+};
+for (const p of PROBEN) p.kurz = PROBE_KURZ[p.id] || p.name;
 export const PROBE = Object.fromEntries(PROBEN.map((p) => [p.id, p]));
 
 export const VEREDELUNG = {

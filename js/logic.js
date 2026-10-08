@@ -364,9 +364,12 @@ export function pruefeAuswahl(run, uids) {
   const cards = uids.map((u) => karte(run, u));
   const ev = bewerte(cards, run);
   const k = r.kritiker;
-  if (k === 'strenge' && uids.length !== 5) return { ok: false, ev, grund: 'Die Strenge verlangt genau fünf Werke.' };
-  if (k === 'gelangweilt' && r.arten.includes(ev.art)) return { ok: false, ev, grund: `${PROGRAMME[ev.art].name} hatten wir heute schon. Gähn.` };
-  if (k === 'abonnentin' && r.arten.length && r.arten[0] !== ev.art) return { ok: false, ev, grund: `Die Stammabonnentin will heute nur ${PROGRAMME[r.arten[0]].name}.` };
+  const fuenf = Math.min(5, r.hand.length);
+  if (k === 'strenge' && uids.length !== fuenf) return { ok: false, ev, grund: `Die Strenge verlangt genau ${fuenf === 5 ? 'fünf' : fuenf} Werke.` };
+  // Diese beiden blockieren nicht – sonst könnte man sich festspielen. Die
+  // Vorstellung bringt dann eben nichts (wie bei Balatro).
+  if (k === 'gelangweilt' && r.arten.includes(ev.art)) return { ok: true, ev, grund: '', nichtig: `${PROGRAMME[ev.art].name} hatten wir heute schon. Gähn.` };
+  if (k === 'abonnentin' && r.arten.length && r.arten[0] !== ev.art) return { ok: true, ev, grund: '', nichtig: `Die Stammabonnentin will heute nur ${PROGRAMME[r.arten[0]].name}.` };
   return { ok: true, ev, grund: '' };
 }
 
@@ -448,10 +451,12 @@ export function auffuehren(run, uidsGewaehlt) {
   let geld = 0;
   const S = (s) => { s.P = P; s.B = B; schritte.push(s); };
   S({ t: 'basis', art, stufe });
+  const nichtig = !!pr.nichtig;
+  if (nichtig) { P = 0; B = 0; S({ t: 'nichtig', text: pr.nichtig }); }
 
   // Stammpublikum wächst vor der Wertung (wie der Bus bei Balatro).
   stars.forEach((s, i) => {
-    if (i === off || s.id !== 'stammpublikum') return;
+    if (nichtig || i === off || s.id !== 'stammpublikum') return;
     if (art === 'solo') { if (s.v) { s.v = 0; S({ t: 'wachs', i, text: 'Zurückgesetzt' }); } }
     else if (ev.enth.doppel) { s.v = (s.v || 0) + 2; S({ t: 'wachs', i, text: `+${s.v}` }); }
   });
@@ -469,7 +474,7 @@ export function auffuehren(run, uidsGewaehlt) {
   const zugabe = stars.some((s, i) => i !== off && s.id === 'zugabe');
   const dacapo = letzte && stars.some((s, i) => i !== off && s.id === 'dacapo');
   const gezaehlt = [];
-  ev.zaehlen.forEach((c, idx) => {
+  (nichtig ? [] : ev.zaehlen).forEach((c, idx) => {
     if (zaehltNicht(run, c)) { S({ t: 'nicht', uid: c.uid }); return; }
     gezaehlt.push(c);
     const mal = 1 + (zugabe && idx === 0 ? 1 : 0) + (dacapo ? 1 : 0);
@@ -490,12 +495,12 @@ export function auffuehren(run, uidsGewaehlt) {
   });
 
   stars.forEach((s, i) => {
-    if (i === off) return;
+    if (nichtig || i === off) return;
     const f = HAND_FX[s.id];
     if (f) wende(f(ctx, s), { i });
   });
 
-  const stern = sternstundenIn(cards);
+  const stern = nichtig ? [] : sternstundenIn(cards);
   const fuehrer = stars.some((s, i) => i !== off && s.id === 'opernfuehrer');
   for (const st of stern) {
     const x = st.x * (fuehrer ? 2 : 1);

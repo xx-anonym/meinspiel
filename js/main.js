@@ -124,7 +124,7 @@ function starHTML(s, { i = null, klasse = '', unbekannt = false } = {}) {
   return `<div class="star r${d.rar} ${aus} ${klasse} ${unbekannt ? 'unbekannt' : ''}" ${i != null ? `data-star="${i}"` : ''} data-sid="${s.id}" title="${esc(unbekannt ? '???' : d.name)}">
     ${wert ? `<span class="s-wert">${wert}</span>` : ''}
     <span class="s-icon">${icon(d.icon)}</span>
-    <span class="s-name">${unbekannt ? '???' : d.name}</span>
+    <span class="s-name">${unbekannt ? '???' : `<span class="lang">${d.name}</span><span class="kurz">${d.kurz}</span>`}</span>
   </div>`;
 }
 
@@ -274,12 +274,16 @@ function renderSpiel() {
 function renderHud() {
   const h = L.haus(run.station);
   const r = run.round;
-  const abend = ABENDE[run.abend];
-  const kId = L.kritikerVon(run);
-  const kAktiv = r ? r.kritiker : L.kritikerAktiv(run);
+  // Im Foyer zeigt die Leiste schon den nächsten Abend.
+  const imFoyer = run.phase === 'shop' || run.phase === 'pack';
+  const naechster = imFoyer && run.abend === 2 ? null : imFoyer ? run.abend + 1 : run.abend;
+  const abendIdx = naechster ?? 0;
+  const abend = ABENDE[abendIdx];
+  const kId = naechster == null ? null : L.kritikerVon(run);
+  const kAktiv = r ? r.kritiker : L.kritikerAktiv(run, abendIdx);
   const k = kId ? KRITIK[kId] : null;
-  const istBoss = run.abend === 2;
-  const ziel = r ? r.ziel : L.ziel(run);
+  const istBoss = abendIdx === 2 && naechster != null;
+  const ziel = r ? r.ziel : naechster == null ? L.ziel(run, run.station + 1, 0) : L.ziel(run, run.station, abendIdx);
   const punkte = r ? r.punkte : 0;
   const stand = L.repertoireStand(run);
   const stationText = run.station <= L.STATIONEN ? `Station ${run.station} von ${L.STATIONEN}` : `Gastspiel ${run.station - L.STATIONEN}`;
@@ -291,7 +295,7 @@ function renderHud() {
       <button class="icon-btn" data-akt="menue" title="Menü">${icon('menue')}</button>
     </div>
     <div class="hud-abend ${istBoss ? 'boss' : ''}">
-      <span class="abend-name">${abend.name}${istBoss && k ? ': ' + k.name : ''}</span>
+      <span class="abend-name">${imFoyer ? 'Foyer · als Nächstes: ' : ''}${naechster == null ? 'nächste Station' : abend.name}${istBoss && k ? ': ' + k.name : ''}</span>
       ${istBoss && k ? `<span class="regel">${kAktiv ? k.regel : 'Hustenbonbons wirken – keine Regel.'}</span>` : ''}
     </div>
     <div class="hud-werte">
@@ -310,7 +314,7 @@ function renderEnsemble() {
   $('#stars').innerHTML = sl.join('');
   $('#stars').style.setProperty('--slots', run.maxStars);
   const pl = [];
-  run.proben.forEach((id, i) => pl.push(`<div class="probe-mini" data-probe="${i}">${icon('probe')}<span>${PROBE[id].name}</span></div>`));
+  run.proben.forEach((id, i) => pl.push(`<div class="probe-mini" data-probe="${i}" title="${PROBE[id].name}">${icon('probe')}<span><span class="lang">${PROBE[id].name}</span><span class="kurz">${PROBE[id].kurz}</span></span></div>`));
   for (let i = run.proben.length; i < run.maxProben; i++) pl.push('<div class="slot-leer">Probe</div>');
   $('#proben').innerHTML = pl.join('');
 }
@@ -429,8 +433,9 @@ function renderVorschau() {
   }
   const stern = L.sternstundenIn(uids.map((u) => L.karte(run, u)));
   const bekannte = stern.filter((s) => meta.sternstunden[s.id]);
-  hin.className = 'hinweis ' + (pr.ok ? '' : 'warn');
+  hin.className = 'hinweis ' + (pr.ok && !pr.nichtig ? '' : 'warn');
   if (!pr.ok && pr.grund) hin.textContent = pr.grund;
+  else if (pr.nichtig) hin.textContent = `${pr.nichtig} Diese Vorstellung bringt 0 Applaus.`;
   else if (bekannte.length) hin.innerHTML = `<span class="stern-vorschau">★ ${bekannte.map((s) => `${s.name} ×${fmtX(s.x)}`).join(' · ')}</span>`;
   else if (stern.length) hin.innerHTML = '<span class="stern-vorschau">★ Hier liegt etwas in der Luft …</span>';
   else hin.textContent = PROGRAMME[ev.art].regel;
@@ -552,8 +557,8 @@ function foyerHTML() {
       ${inv ? `<div class="foyer-sektion"><span class="klein">Investition</span><div class="foyer-reihe">${inv}</div></div>` : ''}
     </div>
     <div class="foyer-knoepfe">
-      <button class="btn btn-blau" data-akt="reroll" ${run.geld >= sh.reroll ? '' : 'disabled'}>Neu disponieren · ${muenze(sh.reroll)}</button>
-      <button class="btn btn-gold" data-akt="foyerWeiter">Weiter zum ${naechster.station !== run.station ? 'Spielplan' : nName === 'Gala' ? 'Gala-Abend' : nName}</button>
+      <button class="btn btn-blau" data-akt="reroll" ${run.geld >= sh.reroll ? '' : 'disabled'}>Neu disponieren<small>${muenze(sh.reroll)}</small></button>
+      <button class="btn btn-gold" data-akt="foyerWeiter">Weiter<small>${naechster.station !== run.station ? 'zur nächsten Station' : nName === 'Gala' ? 'zum Gala-Abend' : 'zum Kritikerabend'}</small></button>
     </div>
   </div>`;
 }
@@ -744,6 +749,13 @@ async function spielen() {
         if (s.i != null) starEl(s.i)?.classList.add('wackeln');
         A.geld();
         await warte(260);
+        break;
+      case 'nichtig':
+        fP.textContent = '0'; fB.textContent = '0';
+        $$('.karte', buehne).forEach((el) => el.classList.add('nicht'));
+        banner(`<span class="b-klein">${KRITIK[run.round?.kritiker || 'gelangweilt']?.name || 'Kritik'}</span><span class="b-gross">Durchgefallen</span><span class="b-neu" style="color:#ffb4aa">${s.text}</span>`, 1600);
+        A.nichts();
+        await warte(1300);
         break;
       case 'nicht':
         flug('zählt nicht', 'n', ziel);
@@ -948,13 +960,23 @@ function halbeSterne(n) {
   return '★'.repeat(voll) + (n - voll >= 0.5 ? '½' : '');
 }
 
+const MIT_ARTIKEL = {
+  solo: 'eine Solo-Arie', doppel: 'ein Doppelabend', zweiDoppel: 'zwei Doppelabende', national: 'ein Nationalabend',
+  kompAbend: 'ein Komponistenabend', zeitreise: 'eine Zeitreise', festspiel: 'eine Festspielwoche', werkschau: 'eine Werkschau',
+  grosseZeit: 'eine Große Zeitreise', gesamtwerk: 'ein Gesamtwerk',
+};
+const ZAHLWORT = ['null', 'ein', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun', 'zehn', 'elf', 'zwölf'];
+const mal = (n) => (n < ZAHLWORT.length ? ZAHLWORT[n] + 'mal' : `${n}-mal`);
+const abende = (n) => `${n} ${n === 1 ? 'Abend' : 'Abende'}`;
+
 function rezensionText(sieg) {
   const st = run.stats;
   const deck = REPERTOIRE[run.deck].name;
   const h = L.haus(run.station);
   const teile = [];
-  if (sieg) teile.push(`Eine Spielzeit für die Geschichtsbücher: mit dem ${deck} von der Oper Leipzig bis auf den Grünen Hügel – ${st.abende} Abende, und das Publikum wollte nicht nach Hause.`);
-  else teile.push(`Mit dem ${deck} ging es bis ${h.stadt === 'Bayreuth' ? 'nach Bayreuth' : `in die ${h.name}`}. ${st.abende === 0 ? 'Gleich der erste Abend wurde zur Zitterpartie.' : `${st.abende} ${st.abende === 1 ? 'Abend hielt' : 'Abende hielten'} das Haus in Atem.`}`);
+  if (sieg) teile.push(`Eine Spielzeit für die Geschichtsbücher: mit dem ${deck} von der Oper Leipzig bis auf den Grünen Hügel – ${abende(st.abende)}, und das Publikum wollte nicht nach Hause.`);
+  else if (run.station === 1) teile.push(`Die Spielzeit mit dem ${deck} endete schon beim Heimspiel in Leipzig. ${st.abende === 0 ? 'Gleich der erste Abend wurde zur Zitterpartie.' : `Immerhin ${st.abende === 1 ? 'ein Abend' : abende(st.abende)} mit Applaus.`}`);
+  else teile.push(`Mit dem ${deck} ging es bis nach ${h.stadt}. ${st.abende === 1 ? 'Ein Abend hielt' : `${abende(st.abende)} hielten`} das Haus in Atem.`);
   const stern = Object.keys(st.sternstunden);
   if (stern.length) {
     const namen = stern.map((id) => STERNSTUNDEN.find((s) => s.id === id)?.name).filter(Boolean);
@@ -962,14 +984,15 @@ function rezensionText(sieg) {
   }
   if (st.besteVorstellung > 0 && st.besteArt) {
     const titel = st.besteWerke.slice(0, 3).map((w) => WERK[w].t).join(', ');
-    teile.push(`Der stärkste Moment war ein ${PROGRAMME[st.besteArt].name} mit ${titel}${st.besteWerke.length > 3 ? ' und mehr' : ''}: ${fmt(st.besteVorstellung)} Applaus.`);
+    teile.push(`Am stärksten: ${MIT_ARTIKEL[st.besteArt]} mit ${titel}${st.besteWerke.length > 3 ? ' und mehr' : ''} – ${fmt(st.besteVorstellung)} Applaus.`);
   }
   const lk = L.lieblingsKomponist(run);
-  if (lk) teile.push(`${KOMPONISTEN[lk.id][1]} stand ${lk.n}-mal auf dem Programm.`);
+  if (lk) teile.push(`${KOMPONISTEN[lk.id][1]} stand ${mal(lk.n)} auf dem Programm.`);
   if (!sieg && st.ende) {
     const e = st.ende;
-    if (e.kritiker) teile.push(`Am Kritikerabend hatte ${KRITIK[e.kritiker].name} das letzte Wort – es fehlten ${fmt(e.ziel - e.punkte)} Applaus.`);
-    else teile.push(`Bei der ${ABENDE[e.abend].name} fehlten am Ende ${fmt(e.ziel - e.punkte)} Applaus.`);
+    const fehlt = Math.max(0, e.ziel - e.punkte);
+    if (e.kritiker) teile.push(`Am Kritikerabend hatte ${KRITIK[e.kritiker].name} das letzte Wort – es fehlten ${fmt(fehlt)} Applaus.`);
+    else teile.push(`${e.abend === 2 ? 'Beim Kritikerabend' : `Bei der ${ABENDE[e.abend].name}`} fehlten am Ende ${fmt(fehlt)} Applaus.`);
   }
   const schluss = sieg ? ['Würde sofort wieder hingehen.', 'Fünf Sterne, ohne Zögern.', 'Bravissimo.'] : ['Würde wieder hingehen.', 'Nächste Spielzeit wird alles anders.', 'Da capo, bitte.', 'Die Inszenierung bleibt im Gedächtnis.'];
   teile.push(schluss[(run.seed + st.abende) % schluss.length]);
@@ -1448,5 +1471,8 @@ A.einstellen(einst);
 document.documentElement.style.setProperty('--tempo', einst.tempo);
 if (run && run.phase === 'vorhang') run = null;
 renderTitel();
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
 // Für Tests und Neugierige
 window.daCapo = { get run() { return run; }, meta, L };

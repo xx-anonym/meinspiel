@@ -72,6 +72,7 @@ function osz(typ, freq, t, dauer, vol, ziel = sfx, { attack = 0.01, release = nu
 function rausch(t, dauer, vol, { typ = 'bandpass', f = 1500, q = 1, ziel = sfx, attack = 0.002 } = {}) {
   const s = ac.createBufferSource();
   s.buffer = rauschen;
+  s.loop = dauer > 0.4;
   const fl = ac.createBiquadFilter(); fl.type = typ; fl.frequency.value = f; fl.Q.value = q;
   const g = ac.createGain();
   g.gain.setValueAtTime(0, t);
