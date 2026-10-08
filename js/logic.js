@@ -300,7 +300,7 @@ const RANG = Object.fromEntries(PROGRAMM_IDS.map((p, i) => [p, i]));
  * Welches Programm ergeben die gespielten Werke? Passen mehrere, gilt das mit
  * dem höchsten Grundwert (Stufe eingerechnet) – das Haus spielt immer die
  * beste Lesart.
- * @returns {{art: string, zaehlen: object[], enth: object, kandidaten: string[]}}
+ * @returns {{art: string, zaehlen: object[], enth: object, kandidaten: string[], statt: string|null}}
  */
 export function bewerte(cards, run = null) {
   const req = run && hatAktiv(run, 'prisma') ? 4 : 5;
@@ -335,17 +335,35 @@ export function bewerte(cards, run = null) {
     const P = PROGRAMME[art];
     return (P.p + (st - 1) * P.sp + summeRuhm(zs)) * (P.b + (st - 1) * P.sb);
   };
-  let [art, zaehlen] = kand[0];
-  let bestWert = wert(kand[0]);
-  for (const k of kand.slice(1)) {
-    const w = wert(k);
-    if (w > bestWert || (w === bestWert && RANG[k[0]] > RANG[art])) { [art, zaehlen] = k; bestWert = w; }
+  const waehle = (liste) => {
+    let best = liste[0];
+    let bestWert = wert(best);
+    for (const k of liste.slice(1)) {
+      const w = wert(k);
+      if (w > bestWert || (w === bestWert && RANG[k[0]] > RANG[best[0]])) { best = k; bestWert = w; }
+    }
+    return best;
+  };
+
+  // Die stärkste *erlaubte* Lesart: Verbietet der Kritiker ein Programm,
+  // spielt das Haus das beste andere, das noch geht.
+  const r = run?.round;
+  let erlaubt = kand;
+  if (r?.kritiker === 'gelangweilt') {
+    const frei = kand.filter(([a]) => !r.arten.includes(a));
+    if (frei.length) erlaubt = frei;
+  } else if (r?.kritiker === 'abonnentin' && r.arten.length) {
+    const pflicht = kand.filter(([a]) => a === r.arten[0]);
+    if (pflicht.length) erlaubt = pflicht;
   }
+  const [art, zaehlen] = waehle(erlaubt);
+  const ohneRegel = waehle(kand)[0];
   const set = new Set(zaehlen);
   return {
     art,
     zaehlen: cards.filter((c) => set.has(c)),
-    kandidaten: kand.map((k) => k[0]),
+    kandidaten: erlaubt.map((k) => k[0]),
+    statt: ohneRegel !== art ? ohneRegel : null,
     enth: {
       doppel: c0 >= 2,
       zweiDoppel: c0 >= 2 && c1 >= 2,

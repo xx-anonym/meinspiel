@@ -436,6 +436,12 @@ function renderVorschau() {
   hin.className = 'hinweis ' + (pr.ok && !pr.nichtig ? '' : 'warn');
   if (!pr.ok && pr.grund) hin.textContent = pr.grund;
   else if (pr.nichtig) hin.textContent = `${pr.nichtig} Diese Vorstellung bringt 0 Applaus.`;
+  else if (ev.statt) {
+    hin.className = 'hinweis';
+    hin.textContent = run.round.kritiker === 'abonnentin'
+      ? `Die Stammabonnentin will nur ${PROGRAMME[ev.art].name} – also kein ${PROGRAMME[ev.statt].name}.`
+      : `${PROGRAMME[ev.statt].name} gab es heute schon – gespielt wird ${PROGRAMME[ev.art].name}.`;
+  }
   else if (bekannte.length) hin.innerHTML = `<span class="stern-vorschau">★ ${bekannte.map((s) => `${s.name} ×${fmtX(s.x)}`).join(' · ')}</span>`;
   else if (stern.length) hin.innerHTML = '<span class="stern-vorschau">★ Hier liegt etwas in der Luft …</span>';
   else {
