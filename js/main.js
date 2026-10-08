@@ -109,7 +109,7 @@ function karteHTML(c, { klasse = '', verdeckt = false } = {}) {
     <div class="k-kopf"><span class="k-ruhm">${w.r}</span><span class="k-schule">${SCHULEN[s].kurz}</span></div>
     <div class="k-titel ${lang}">${titel}</div>
     <div class="k-komp">${KOMPONISTEN[w.c][0]}</div>
-    <div class="k-epoche"><span class="lang">${ep.name}</span><span class="kurz">Epoche ${ep.roem}</span></div>
+    <div class="k-epoche"><span class="lang">${ep.name}</span><span class="kurz">${ep.kurz}</span></div>
     <div class="k-fuss"><span class="k-jahr">${w.y}</span>${w.h ? '<span class="k-heiter">heiter</span>' : ''}<span class="k-akte" title="${w.a} ${w.a === 1 ? 'Akt' : 'Akte'}">${'●'.repeat(w.a)}</span></div>
     ${enh}
   </div>`;
@@ -1470,6 +1470,13 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) speic
 A.einstellen(einst);
 document.documentElement.style.setProperty('--tempo', einst.tempo);
 if (run && run.phase === 'vorhang') run = null;
+if (run) {
+  const neu = L.kritikerReparieren(run);
+  if (neu) {
+    speichereLauf(run);
+    setTimeout(() => toast(`Der unfaire Kritiker wurde ausgeladen. Heute urteilt: <b>${KRITIK[neu].name}</b>.`, 'gut'), 600);
+  }
+}
 renderTitel();
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

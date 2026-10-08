@@ -107,8 +107,9 @@ function kritikerWaehlen(run) {
   if (st % STATIONEN === 0) {
     run.kritiker[st] = pick(run, FINAL_KRITIKER).id;
   } else {
-    let pool = KRITIKER.filter((k) => !run.kritikerGehabt.includes(k.id));
-    if (!pool.length) { run.kritikerGehabt = []; pool = KRITIKER; }
+    const fair = KRITIKER.filter((k) => !kritikerUnfair(run, k.id));
+    let pool = fair.filter((k) => !run.kritikerGehabt.includes(k.id));
+    if (!pool.length) { run.kritikerGehabt = []; pool = fair; }
     // In Station 1 keine allzu gemeinen Regeln.
     if (st === 1) pool = pool.filter((k) => !['strenge', 'schlaefer', 'ungeduld', 'pedant'].includes(k.id));
     const k = pick(run, pool).id;
@@ -119,6 +120,39 @@ function kritikerWaehlen(run) {
     const pool = INVESTITIONEN.filter((v) => !run.investitionen.includes(v.id));
     run.investAngebot[st] = pool.length ? pick(run, pool).id : null;
   }
+}
+
+// Eine Regel, die den Großteil des Repertoires entwertet, macht den Abend
+// unspielbar – etwa der Kritiker vom Hügel gegen das rein italienische
+// Belcanto-Abo. Solche Kritiker werden nicht gezogen.
+const UNFAIR_AB = 0.6;
+function kritikerUnfair(run, k) {
+  const n = run.repertoire.length;
+  if (!n) return false;
+  return run.repertoire.filter((c) => kritikerTrifft(k, c)).length / n > UNFAIR_AB;
+}
+
+// Kritiker, die man mitten im Abend tauschen kann, ohne Ziel, Hand oder
+// Vorstellungen neu zu berechnen.
+const TAUSCHBAR = ['purist', 'avantgarde', 'mailand', 'huegel', 'wagnerianer', 'moralist', 'gelangweilt', 'abonnentin', 'feuilleton', 'pedant', 'huster', 'sparkommissar'];
+
+/**
+ * Repariert Spielstände, die noch einen unfairen Kritiker gezogen haben.
+ * Gibt den neuen Kritiker zurück, wenn getauscht wurde.
+ */
+export function kritikerReparieren(run) {
+  const st = run.station;
+  const alt = run.kritiker[st];
+  if (!alt || !KRITIKER.some((k) => k.id === alt) || !kritikerUnfair(run, alt)) return null;
+  const imAbend = run.phase === 'abend' && run.abend === 2 && run.round;
+  let pool = KRITIKER.filter((k) => !kritikerUnfair(run, k.id) && k.id !== alt);
+  if (imAbend) pool = pool.filter((k) => TAUSCHBAR.includes(k.id));
+  if (!pool.length) return null;
+  const neu = pick(run, pool).id;
+  run.kritiker[st] = neu;
+  run.kritikerGehabt = run.kritikerGehabt.filter((k) => k !== alt).concat(neu);
+  if (imAbend && run.round.kritiker === alt) run.round.kritiker = neu;
+  return neu;
 }
 
 export function kritikerVon(run, station = run.station) {
@@ -342,7 +376,11 @@ export function programmWerte(run, art) {
 
 export function zaehltNicht(run, c) {
   const k = run.round?.kritiker;
-  if (!k) return false;
+  return k ? kritikerTrifft(k, c) : false;
+}
+
+/** Würde die Regel dieses Kritikers das Werk entwerten? */
+export function kritikerTrifft(k, c) {
   const w = werkVon(c);
   switch (k) {
     case 'purist': return w.y > 1900;

@@ -14,12 +14,12 @@ export const SCHULEN = {
 export const SCHUL_IDS = Object.keys(SCHULEN);
 
 export const EPOCHEN = [
-  { name: 'Barock', roem: 'I', bis: 1759 },
-  { name: 'Klassik', roem: 'II', bis: 1809 },
-  { name: 'Frühromantik', roem: 'III', bis: 1849 },
-  { name: 'Hochromantik', roem: 'IV', bis: 1889 },
-  { name: 'Fin de Siècle', roem: 'V', bis: 1919 },
-  { name: 'Moderne', roem: 'VI', bis: 9999 },
+  { name: 'Barock', kurz: 'Barock', roem: 'I', bis: 1759 },
+  { name: 'Klassik', kurz: 'Klassik', roem: 'II', bis: 1809 },
+  { name: 'Frühromantik', kurz: 'Frührom.', roem: 'III', bis: 1849 },
+  { name: 'Hochromantik', kurz: 'Hochrom.', roem: 'IV', bis: 1889 },
+  { name: 'Fin de Siècle', kurz: 'Fin de S.', roem: 'V', bis: 1919 },
+  { name: 'Moderne', kurz: 'Moderne', roem: 'VI', bis: 9999 },
 ];
 export const epocheVon = (jahr) => EPOCHEN.findIndex((e) => jahr <= e.bis);
 
