@@ -356,7 +356,9 @@ b { font-weight: 700; }
 }
 .karte.verdeckt::before { display: none; }
 .ruecken { font-family: var(--f-disp); font-style: italic; font-weight: 900; color: var(--gold-h); font-size: 26cqw; text-shadow: 0 2px 4px #000; }
-.karte.neu { animation: austeilen calc(.38s / var(--tempo)) cubic-bezier(.2, .8, .2, 1) both; }
+/* backwards statt both: Nach dem Austeilen darf die Animation nichts mehr
+   festhalten, sonst heben sich gewählte Karten nicht und blassen nicht ab. */
+.karte.neu { animation: austeilen calc(.38s / var(--tempo)) cubic-bezier(.2, .8, .2, 1) backwards; }
 @keyframes austeilen { from { transform: translateY(120px) rotate(8deg); opacity: 0; } to { transform: none; opacity: 1; } }
 .karte.weg { transition: transform calc(.3s / var(--tempo)) ease-in, opacity calc(.3s / var(--tempo)); transform: translate(60vw, -30px) rotate(25deg) !important; opacity: 0; }
 .karte.hoch { transition: transform calc(.4s / var(--tempo)) ease-in, opacity calc(.4s / var(--tempo)); transform: translateY(-80px) scale(.9) !important; opacity: 0; }

@@ -438,7 +438,15 @@ function renderVorschau() {
   else if (pr.nichtig) hin.textContent = `${pr.nichtig} Diese Vorstellung bringt 0 Applaus.`;
   else if (bekannte.length) hin.innerHTML = `<span class="stern-vorschau">★ ${bekannte.map((s) => `${s.name} ×${fmtX(s.x)}`).join(' · ')}</span>`;
   else if (stern.length) hin.innerHTML = '<span class="stern-vorschau">★ Hier liegt etwas in der Luft …</span>';
-  else hin.textContent = PROGRAMME[ev.art].regel;
+  else {
+    // Passt auch ein Programm, das in der Rangfolge höher steht, erklären,
+    // warum es nicht gespielt wird.
+    const rang = PROGRAMM_IDS.indexOf(ev.art);
+    const hoeher = ev.kandidaten.filter((a) => PROGRAMM_IDS.indexOf(a) > rang);
+    hin.textContent = hoeher.length
+      ? `Bringt mehr als ${hoeher.map((a) => `${PROGRAMME[a].name} (Stufe ${run.stufen[a]})`).join(' oder ')} – das Haus spielt die stärkere Lesart.`
+      : PROGRAMME[ev.art].regel;
+  }
 }
 
 // ---------- Hand
