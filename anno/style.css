@@ -38,6 +38,7 @@
   --tipp-text: #ffffff;
   --loesung: #a5371e;
   --loesung-text: #ffffff;
+  --gut: #3f6b38;
   --schatten: 0 1px 2px rgb(70 50 20 / 6%), 0 10px 28px -14px rgb(70 50 20 / 22%);
   --schrift: 'Anno Garamond', 'Anno Cardo', 'EB Garamond', Garamond, 'Times New Roman', serif;
   --breite: 40rem;
@@ -56,6 +57,7 @@
     --tipp-text: #0f1a2c;
     --loesung: #ec8c6d;
     --loesung-text: #2a1007;
+    --gut: #9ac78f;
     --schatten: 0 1px 2px rgb(0 0 0 / 30%), 0 10px 28px -14px rgb(0 0 0 / 60%);
     color-scheme: dark;
   }
@@ -153,6 +155,91 @@ main {
 .passage .rede.vers .sprecher { display: block; }
 .passage .regie { font-style: italic; color: var(--grau); }
 .passage.klein { font-size: 1.05rem; line-height: 1.5; }
+.passage .kontext { color: color-mix(in srgb, var(--tinte) 58%, var(--blatt)); }
+.passage .neu { animation: einblenden .6s ease-out; }
+@keyframes einblenden { from { opacity: 0; } to { opacity: 1; } }
+.passage mark {
+  background: color-mix(in srgb, var(--tipp) 16%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  box-shadow: 0 0 0 .12em color-mix(in srgb, var(--tipp) 16%, transparent);
+}
+.passage.nmpz:not(.klein) p:only-child { font-size: 1.12em; text-align: left; }
+
+.modus-zeile {
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: .2rem 1rem;
+  margin: 0 0 .5rem;
+  color: var(--grau);
+  font-variant-caps: all-small-caps;
+  letter-spacing: .06em;
+  font-size: .95rem;
+}
+#moeglich { color: var(--loesung); }
+
+.mehr {
+  display: block;
+  width: 100%;
+  font: inherit;
+  color: var(--grau);
+  background: transparent;
+  border: 1px dashed var(--linie);
+  border-radius: 3px;
+  padding: .45rem .8rem;
+  margin: .5rem 0;
+  min-height: 44px;
+  cursor: pointer;
+  font-variant-caps: all-small-caps;
+  letter-spacing: .07em;
+  font-size: 1.05rem;
+}
+.mehr small { color: var(--loesung); font-size: .95em; margin-left: .3em; }
+.mehr:not(:disabled):hover { color: var(--tinte); border-color: var(--hell); }
+.mehr:disabled { opacity: .55; cursor: default; }
+
+/* Zusatzfragen */
+.zusatz { margin-top: 1rem; padding-top: .9rem; padding-bottom: 1rem; }
+.zusatz-kopf {
+  margin: 0 0 .6rem;
+  font-variant-caps: all-small-caps;
+  letter-spacing: .08em;
+  color: var(--grau);
+}
+.zusatz-kopf small { font-variant-caps: normal; letter-spacing: 0; font-style: italic; margin-left: .3em; }
+.zusatz-zeile { display: grid; grid-template-columns: 5.5rem 1fr; align-items: center; gap: .4rem .8rem; }
+.zusatz-zeile + .zusatz-zeile { margin-top: .7rem; }
+.zusatz-titel { font-variant-caps: all-small-caps; letter-spacing: .06em; }
+.zusatz.fertig { opacity: .75; }
+.autor-feld { position: relative; }
+.autor-feld input {
+  width: 100%;
+  font: inherit;
+  font-size: 1.05rem;
+  color: var(--tinte);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--hell);
+  border-radius: 0;
+  padding: .35em .1em;
+  min-height: 40px;
+}
+.autor-feld input:focus { outline: none; border-bottom-color: var(--tipp); box-shadow: 0 1px 0 var(--tipp); }
+.autor-feld input::placeholder { color: var(--hell); font-style: italic; }
+.autor-liste {
+  position: absolute; left: 0; right: 0; top: 100%; z-index: 20;
+  margin: .2rem 0 0; padding: .25rem 0;
+  list-style: none;
+  background: var(--blatt);
+  border: 1px solid var(--linie);
+  border-radius: 3px;
+  box-shadow: var(--schatten);
+  max-height: 17rem;
+  overflow-y: auto;
+}
+.autor-liste li { padding: .4rem .8rem; cursor: pointer; line-height: 1.3; }
+.autor-liste li small { display: block; color: var(--grau); font-size: .85rem; }
+.autor-liste li[aria-selected="true"], .autor-liste li:hover { background: color-mix(in srgb, var(--tipp) 12%, transparent); }
+/* Beim Tippen des Autors soll das Dock Tastatur und Vorschläge nicht verdecken */
+body:has(#autor-ein:focus) .dock { position: static; }
 
 /* ---------------------------------------------------------------- Knöpfe */
 
@@ -183,10 +270,43 @@ main {
   font-variant-numeric: lining-nums tabular-nums;
   font-size: 1rem;
 }
+.knopf:not(.haupt):not(.klein) {
+  padding: .3em 1.2em .4em;
+  font-variant-caps: all-small-caps;
+  letter-spacing: .08em;
+  font-size: 1.1rem;
+}
+.knopf.leise { border-color: transparent; background: none; color: var(--grau); }
 .knopf:not(:disabled):active { transform: translateY(1px); }
 .knopf:disabled { cursor: default; }
 
-.weiter-zeile { display: flex; justify-content: center; margin: 1.6rem 0 0; }
+.knopf-reihe { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; margin: 1.6rem 0 0; }
+.knopf-reihe.links { justify-content: flex-start; margin-top: .8rem; }
+
+.link {
+  font: inherit; color: var(--grau); background: none; border: 0; padding: .3em .2em; cursor: pointer;
+  text-decoration: underline; text-decoration-color: var(--hell); text-underline-offset: .18em;
+  font-variant-caps: all-small-caps; letter-spacing: .08em; font-size: 1.05rem;
+}
+.link:hover { color: var(--tinte); }
+
+/* Auswahl: Einzel- und Mehrfachwahl als „Chips“ */
+.wahl { display: flex; flex-wrap: wrap; gap: .4rem; }
+.chip {
+  font: inherit;
+  font-size: 1rem;
+  color: var(--tinte);
+  background: transparent;
+  border: 1px solid var(--linie);
+  border-radius: 999px;
+  padding: .2em .85em .28em;
+  min-height: 38px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.chip[aria-checked="true"] { background: var(--tinte); border-color: var(--tinte); color: var(--papier); }
+.chip:disabled { cursor: default; opacity: .55; }
+.chip:disabled[aria-checked="true"] { opacity: .8; }
 
 /* ---------------------------------------------------------------- Dock */
 
@@ -244,6 +364,7 @@ main {
   position: absolute; top: 49px; width: 1px; height: 8px; margin-left: -.5px;
   background: var(--hell);
 }
+.zl-strich.j5 { top: 50px; height: 5px; opacity: .7; }
 .zl-strich.j50 { top: 46px; height: 14px; }
 .zl-strich.j100 { top: 43px; height: 20px; width: 2px; margin-left: -1px; background: var(--tinte); }
 .zl-zahl {
@@ -302,6 +423,17 @@ main {
 .punkte { text-align: right; font-variant-numeric: lining-nums tabular-nums; }
 .punkte span { display: block; font-size: 2.6rem; line-height: 1; font-weight: 600; }
 .punkte small { color: var(--grau); font-size: .9rem; }
+.wertung { width: 100%; border-collapse: collapse; margin: .2rem 0 1rem; font-size: 1rem; }
+.wertung th, .wertung td { padding: .32rem 0; border-top: 1px solid var(--linie); text-align: left; vertical-align: baseline; }
+.wertung th {
+  width: 5.2rem; font-weight: 400; color: var(--grau);
+  font-variant-caps: all-small-caps; letter-spacing: .06em;
+}
+.wertung .wert { text-align: right; white-space: nowrap; font-variant-numeric: lining-nums tabular-nums; padding-left: .8rem; }
+.wertung tr.leer td { color: var(--hell); }
+.richtig, .falsch { font-variant-caps: all-small-caps; letter-spacing: .06em; margin-right: .3em; }
+.richtig { color: var(--gut); }
+.falsch { color: var(--loesung); }
 .werk-autor {
   margin: 0;
   font-variant-caps: all-small-caps;
@@ -335,6 +467,21 @@ main {
   font-size: 1.2rem;
 }
 .start-text p { text-align: left; }
+.einstellungen, .tag-karte, .challenge { margin-top: 1rem; }
+.einstellungen fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.einstellungen fieldset + fieldset { margin-top: 1rem; }
+.einstellungen legend {
+  padding: 0; margin-bottom: .4rem;
+  font-variant-caps: all-small-caps; letter-spacing: .08em; color: var(--grau);
+}
+.erklaerung { margin: .45rem 0 0; font-size: .95rem; color: var(--grau); font-style: italic; }
+.auswahl-info { margin: 1rem 0 0; font-size: .95rem; color: var(--grau); }
+.tag-karte { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.tag-karte p { margin: 0; }
+.tag-karte .zusatz-kopf { margin-bottom: .2rem; }
+.challenge { border-left: 3px solid var(--loesung); }
+.challenge p { margin: 0 0 .3rem; }
+.fuss { display: flex; justify-content: center; gap: 1rem; margin-top: 1.4rem; }
 .ueber { margin-top: 2.2rem; border-top: 1px solid var(--linie); padding-top: .8rem; }
 .ueber summary {
   cursor: pointer;
@@ -367,6 +514,9 @@ main {
 .gesamt span { font-size: 3.6rem; font-weight: 600; line-height: 1.1; }
 .gesamt small { display: block; color: var(--grau); font-size: 1rem; }
 .schnitt { text-align: center; color: var(--grau); margin: .3rem 0 1.4rem; font-style: italic; }
+.hinweis-zeile { text-align: center; margin: -.8rem 0 1.2rem; color: var(--loesung); font-variant-caps: all-small-caps; letter-spacing: .08em; }
+.vergleich { text-align: center; margin: -.6rem 0 1.4rem; }
+.rb-gegen { display: block; font-weight: 400; font-size: .85rem; color: var(--grau); text-align: right; }
 
 .uebersicht { padding: 1rem 1.2rem .8rem; }
 .mini { display: flex; align-items: center; gap: .6rem; height: 26px; }
@@ -406,12 +556,45 @@ main {
 .rb-punkte { font-weight: 600; font-variant-numeric: lining-nums tabular-nums; font-size: 1.2rem; }
 .rb-meta { margin: .3rem 0 .8rem; color: var(--grau); font-size: .95rem; }
 
+/* ---------------------------------------------------------------- Statistik */
+
+.statistik .blatt + .blatt { margin-top: 1rem; }
+.statistik h2 {
+  margin: 0 0 .6rem; font-weight: 400; font-size: 1.25rem;
+  font-variant-caps: all-small-caps; letter-spacing: .08em;
+}
+.statistik h3 { margin: 1.2rem 0 .3rem; font-weight: 400; font-size: 1.05rem; color: var(--grau); font-style: italic; }
+.kennzahlen { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.4rem, 1fr)); gap: 1rem; margin-top: 1.2rem; text-align: center; }
+.kennzahlen span { display: block; font-size: 1.9rem; line-height: 1.1; font-weight: 600; font-variant-numeric: lining-nums tabular-nums; }
+.kennzahlen small { color: var(--grau); font-size: .9rem; }
+.fleck { margin: 0 0 .3rem; font-size: 1.1rem; }
+.balken, .liste { width: 100%; border-collapse: collapse; font-size: .98rem; }
+.balken th, .balken td, .liste th, .liste td { padding: .3rem 0; border-top: 1px solid var(--linie); text-align: left; vertical-align: middle; font-weight: 400; }
+.balken th { width: 34%; padding-right: .6rem; }
+.balken-zelle { width: 30%; }
+.balken-strich { display: block; height: 8px; border-radius: 4px; background: var(--loesung); opacity: .75; min-width: 2px; }
+.balken .wert, .liste .wert { text-align: right; white-space: nowrap; padding-left: .6rem; font-variant-numeric: lining-nums tabular-nums; }
+.balken .neben, .liste .neben { color: var(--grau); font-size: .88rem; padding-left: .6rem; white-space: nowrap; }
+.liste .neben { text-align: right; }
+
+/* ---------------------------------------------------------------- Meldung */
+
+.meldung {
+  position: fixed; left: 50%; bottom: calc(1.2rem + env(safe-area-inset-bottom)); z-index: 50;
+  transform: translateX(-50%);
+  background: var(--tinte); color: var(--papier);
+  padding: .5rem 1.1rem; border-radius: 3px;
+  box-shadow: var(--schatten);
+  font-size: 1rem;
+}
+
 /* ---------------------------------------------------------------- Handy */
 
 @media (max-width: 34rem) {
   body { font-size: 1.0625rem; }
   .blatt { padding: 1.05rem 1.1rem; }
   .passage { font-size: 1.15rem; line-height: 1.55; }
+  .passage p { text-align: left; }
   .passage.klein { font-size: 1rem; }
   .zl-flaeche { inset: 0 20px; }
   .zl-zahl { font-size: .76rem; }
@@ -419,6 +602,13 @@ main {
   .knopf.klein { min-width: 44px; }
   .loesung-jahr, .punkte span { font-size: 2.2rem; }
   .gesamt span { font-size: 3rem; }
+  .zl-zahl.leise { display: none; }
+  .zusatz-zeile { grid-template-columns: 1fr; gap: .3rem; }
+  .chip { font-size: .95rem; padding: .2em .7em .26em; }
+  .tag-karte { flex-direction: column; align-items: stretch; }
+  .balken th { width: auto; }
+  .balken .neben { display: none; }
+  .liste .neben { white-space: normal; }
 }
 
 @media (prefers-reduced-motion: reduce) {

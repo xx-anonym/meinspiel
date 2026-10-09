@@ -11,24 +11,6 @@ siehe [CREDITS.md](CREDITS.md)).
 
 Reines HTML, CSS und JavaScript. Kein Framework, kein Build-Schritt.
 
-## Stand
-
-Erste Ausbaustufe: Vorverarbeitung und Kernschleife.
-
-- Modus **Original** (Schreibung und Typografie wie im Druck)
-- **No Move**: nur die eine Passage
-- Wertung nur nach dem Jahr: `4000 · e^(−Abstand/35)`, also 4.000 Punkte für
-  das exakte Jahr, ±10 Jahre ≈ 3.000, ±25 ≈ 2.000, ±50 ≈ 950, ±100 ≈ 230
-- Auflösung mit Distanzlinie auf der Zeitleiste, hochzählenden Punkten und
-  einem Link auf die Faksimile-Seite im DTA
-- Auswertung nach fünf Runden mit allen Passagen, Lösungen und Punkten
-
-Die Daten enthalten schon alles für die nächsten Stufen: Kontext für
-„Moving“, den Einzelsatz für „NMPZ“ und die normalisierte Fassung.
-Noch nicht im Spiel sind die Modi Moving und NMPZ, die Schwierigkeitsstufen
-„Moderne Typografie“ und „Normalisiert“, die Filter, Gattung und Autor als
-Zusatzfragen, die Statistik, die Daily Challenge und der Challenge-Link.
-
 ## Spielen
 
 ```bash
@@ -40,14 +22,67 @@ python3 -m http.server 8000
 Ein lokaler Server ist nötig, weil der Browser die JSON-Dateien nicht von
 `file://` lädt.
 
-Bedienung:
+### Einstellungen
+
+| | |
+| --- | --- |
+| **Bewegung** | **Moving**: Über und unter der Passage holt man sich den Absatz davor oder danach dazu (je bis zu zwei Schritte). Jeder Schritt kostet 10 % der möglichen Punkte. **No Move**: nur die Passage. **NMPZ**: nur ein einzelner Satz. |
+| **Schreibung** | **Original**: wie im Druck (ſ, uͤ, ꝛc., Virgeln). **Moderne Typografie**: ſ → s, uͤ/aͤ/oͤ → ü/ä/ö, ꝛ → r, ꝛc. → etc., dañ → dann, Virgel → Komma, „HErꝛ“ → „Herr“, J/V am Wortanfang vor Konsonant → I/U („Jch“ → „Ich“, „vnd“ → „und“). Die Rechtschreibung bleibt historisch („seyn“, „Theil“). **Normalisiert**: die normalisierte Fassung des DTA in moderner Schreibung. |
+| **Gattung** | Belletristik, Gebrauchsliteratur, Wissenschaft (Mehrfachauswahl) |
+| **Zeitraum** | 17., 18., 19. Jahrhundert (Mehrfachauswahl). Die Zeitleiste zeigt dann nur den gewählten Bereich, z. B. 1700–1800 mit Jahrzehnten. |
+
+Die Einstellungen bleiben im Browser gespeichert.
+
+### Bedienung
 
 - **Zeitleiste** antippen oder ziehen, um den Pin zu setzen.
 - **−10 / −1 / +1 / +10** zum Feinjustieren, auch mit dem Finger.
 - **Tastatur** (Zeitleiste fokussiert): ← → je ein Jahr, mit Umschalt zehn
   Jahre, Bild ↑/↓ zehn Jahre, Pos1/Ende springen an den Rand. Vier Ziffern
   setzen das Jahr direkt, z. B. `1774`.
+- **Gattung und Autor** sind freiwillig. Das Autorfeld schlägt beim Tippen
+  Namen aus dem Korpus vor (↑ ↓ und Enter zum Auswählen). Es kennt auch
+  Schreibvarianten und Pseudonyme: „Richter“ findet Jean Paul, „Hardenberg“
+  Novalis. Wer nicht auswählt, bekommt den Punkt trotzdem, wenn der ganze
+  Name oder ein eindeutiger Nachname („Lessing“) passt.
 - **Enter** tippt bzw. geht zur nächsten Runde.
+- Nach der Auflösung darf man kostenlos weiterlesen (Absatz davor/danach).
+  Im NMPZ-Modus erscheint dann die ganze Passage mit dem markierten Satz.
+
+### Wertung (höchstens 5.000 pro Runde)
+
+- **Jahr**: `4000 · e^(−Abstand/35)`, also 4.000 Punkte für das exakte Jahr,
+  ±10 Jahre ≈ 3.000, ±25 ≈ 2.000, ±50 ≈ 950, ±100 ≈ 230.
+- **Gattung** richtig: +500 (Hauptkategorie des DTA).
+- **Autor** richtig: +500. Personen werden über die GND-Nummer erkannt; bei
+  Werken mit mehreren Verfassern zählt jeder. Anonyme Werke haben den
+  „Autor“ Anonym.
+- **Moving**: Die Summe der Runde wird um 10 % je Schritt gekürzt.
+
+### Tagesaufgabe und Challenge-Link
+
+- **Tagesaufgabe**: fünf feste Passagen pro Tag (Datum in deutscher Zeit),
+  No Move, Original, ohne Filter. Gewertet wird der erste Versuch; eine
+  Wiederholung zählt nicht für die Statistik.
+- **Challenge-Link**: Nach jedem Spiel erzeugt „Challenge-Link teilen“ eine
+  Adresse mit Seed, Einstellungen und den eigenen Punkten je Runde, z. B.
+  `?seed=7onhas1x0qgkh&bew=move&schr=typo&gat=BGW&jh=18&gegen=1112.2759.3183.2073.1650`.
+  Wer den Link öffnet, spielt dieselben fünf Passagen mit denselben Regeln und
+  sieht am Ende den Vergleich Runde für Runde. Die Auswahl hängt nur vom Seed,
+  den Einstellungen und den Daten ab. Ein Link bleibt gültig, solange
+  `data/` gleich bleibt.
+
+### Statistik
+
+Gespeichert im Browser (`localStorage`, Schlüssel `anno.statistik`):
+Bestwerte je Kombination aus Bewegung und Schreibung (mit Filter getrennt),
+die letzten 20 Spiele, die Trefferquote bei Gattung und Autor und die
+durchschnittliche Abweichung nach Epoche, Jahrhundert und Gattung,
+jeweils mit der Tendenz zu früh oder zu spät. Die Seite nennt den größten
+blinden Fleck, z. B. „Am weitesten daneben liegst du bei Barock: Ø 38 Jahre“.
+Die Epochen sind grob nach Jahren eingeteilt: Barock bis 1719, Aufklärung
+bis 1769, Sturm und Drang/Klassik bis 1804, Romantik bis 1829,
+Biedermeier/Vormärz bis 1849, Realismus bis 1889, danach Moderne.
 
 ## Daten neu erzeugen
 
@@ -73,6 +108,13 @@ python3 scripts/build_passages.py \
   --norm pfad/gesamt.zip
 ```
 
+Nur Metadaten (Autoren, Titel, Gattung) neu schreiben, ohne die Passagen
+neu auszuwählen (dauert Sekunden):
+
+```bash
+python3 scripts/build_passages.py --tei pfad/dta_kernkorpus_2026-02-10.zip --nur-metadaten
+```
+
 `--tei` und `--norm` nehmen ZIP-Dateien oder entpackte Ordner. Ohne `--norm`
 entstehen die Passagen ohne normalisierte Fassung. Mit
 `--nur werk1 werk2 …` (DTA-Kürzel wie `goethe_werther01_1774`) oder
@@ -91,7 +133,8 @@ python3 scripts/stichproben.py 5 --kontext --norm      # mit Kontext und normali
 
 ### Was das Skript tut
 
-1. **Metadaten** aus dem `teiHeader`: Autor, Titel, Untertitel,
+1. **Metadaten** aus dem `teiHeader`: Autor (mit GND-Nummer und
+   Pseudonym aus `addName`), Titel, Untertitel,
    Erscheinungsjahr der digitalisierten Ausgabe, Ort, Auflage, Gattung
    (`dwds1main`: Belletristik, Gebrauchsliteratur, Wissenschaft),
    Untergattung (`dtasub`), URL. Das DTA digitalisiert nach seinen
@@ -164,15 +207,26 @@ python3 scripts/stichproben.py 5 --kontext --norm      # mit Kontext und normali
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "quelle": { "name": "Deutsches Textarchiv, Kernkorpus", "lizenz": "CC BY-SA 4.0",
               "seite": "https://www.deutschestextarchiv.de/book/view/{id}?p={seite}", "…": "…" },
+  "autoren": [
+    { "name": "Jean Paul", "alias": ["Johann Paul Friedrich Richter"] },
+    { "name": "Wilhelm Raabe", "alias": ["Jakob Corvinus"] }
+  ],
   "werke": [
     { "id": "raabe_stopfkuchen_1891", "autor": "Wilhelm Raabe", "titel": "Stopfkuchen",
-      "jahr": 1891, "gattung": "Belletristik", "untergattung": "Roman", "n": 13, "norm": 13 }
+      "jahr": 1891, "gattung": "Belletristik", "untergattung": "Roman",
+      "a": [719], "n": 13, "norm": 13 }
   ]
 }
 ```
+
+`autoren` ist die Tabelle für Autovervollständigung und Wertung: eine Zeile
+je Person, über die GND-Nummer zusammengeführt, mit dem häufigsten Namen und
+den übrigen Schreibungen und Pseudonymen als `alias`. `a` verweist auf die
+Zeilen der Verfasser eines Werks. Regierende Fürsten heißen einheitlich
+„Name Ordnungszahl, Titel von Land“ („Friedrich II., König von Preußen“).
 
 `data/passages/<id>.json` enthält dieselben Metadaten (dazu `untertitel`,
 `ort`, `auflage`, `url`, `lizenz`) und die Passagen:
@@ -205,5 +259,5 @@ Regieanweisung mitten in einer Rede steht in `⟨…⟩`.
 | `scripts/build_passages.py` | Vorverarbeitung DTA → JSON |
 | `scripts/schriften.py` | Schrift-Untermengen erzeugen |
 | `scripts/stichproben.py` | Zufällige Passagen als Markdown ausgeben |
-| `STICHPROBEN.md` | 20 Stichproben zur Kontrolle |
+| `STICHPROBEN.md` | 20 Stichproben zur Kontrolle (Stufe 1) |
 | `CREDITS.md` | Quellen und Lizenzen |

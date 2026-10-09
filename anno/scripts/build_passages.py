@@ -180,20 +180,25 @@ def metadaten(h):
         gen = _txt(p.find('t:genName', NS))
         rolle = _txt(p.find('t:roleName', NS))
         zusatz = _txt(p.find('t:addName', NS))
-        if sn in ('N. N.', 'NN', 'N. N', 'Anonym', ''):
+        gnd = p.get('ref')
+        if sn in ('N. N.', 'NN', 'N. N', 'Anonym', 'o. A.', ''):
             if fn:
-                autoren.append(' '.join(x for x in (fn, gen) if x) + (f' ({rolle})' if rolle else ''))
-            else:
-                autoren.append('Anonym')
+                name = ' '.join(x for x in (fn, gen) if x) + (f', {rolle}' if rolle else '')
+                autoren.append({'name': name, 'gnd': gnd, 'alias': []})
             continue
+        fuerst = fuerstenname(sn, fn)
         if '<' in sn:
-            autoren.append(re.sub(r'\s*<(.*?)>', r' (\1)', sn))
+            autoren.append({'name': fuerst or re.sub(r'\s*<(.*?)>', r' (\1)', sn), 'gnd': gnd, 'alias': []})
             continue
-        autoren.append(f'{fn} {sn}'.strip())
+        alias = []
+        if zusatz and '<' not in zusatz:
+            teile = [t.strip() for t in zusatz.split(',')]
+            alias.append(' '.join(reversed(teile)) if len(teile) == 2 else zusatz)
+        autoren.append({'name': fuerst or f'{fn} {sn}'.strip(), 'gnd': gnd, 'alias': alias})
         namen.append(sn)
         if zusatz:
             namen.append(zusatz.split(',')[0].strip())
-    autor = ' / '.join(dict.fromkeys(autoren)) or 'Anonym'
+    autor = ' / '.join(dict.fromkeys(a['name'] for a in autoren)) or 'Anonym'
     pub = bf.find('t:publicationStmt', NS)
     jahr = int(_txt(pub.find('t:date[@type="publication"]', NS))[:4])
     ort = _txt(pub.find('t:pubPlace', NS))
@@ -227,7 +232,45 @@ def metadaten(h):
         'lizenz': lizenz.get('target') if lizenz is not None else None,
         'hinweis': hinweis,
         '_namen': namen,
+        '_autoren': autoren,
     }
+
+
+TITEL = {'Herzog', 'Herzogin', 'König', 'Königin', 'Kurfürst', 'Markgraf', 'Fürst', 'Fürstin', 'Graf', 'Gräfin',
+         'Kaiser', 'Kaiserin', 'Landgraf', 'Woiwode', 'Prinz', 'Prinzessin', 'Bischof', 'Erzbischof'}
+ORDNUNG = re.compile(r'^[IVXL]+\.$')
+FUERSTEN_SONDERFALL = {'Leopold Römisch-Deutsches Reich': 'Leopold I., römisch-deutscher Kaiser'}
+
+
+def fuerstenname(sn, fn):
+    """Regierende Fürsten einheitlich als „Name Ordnungszahl, Titel von Land“.
+
+    Das DTA verteilt diese Namen unterschiedlich auf surname und forename,
+    z. B. „<Württemberg, Herzog>“ + „Eberhard Ludwig“, „Preußen, König“ +
+    „Friedrich I.“ oder „Rudolf-August Braunschweig-Lüneburg“ + „Herzog“."""
+    if sn in FUERSTEN_SONDERFALL:
+        return FUERSTEN_SONDERFALL[sn]
+    m = re.match(r'^(.*?)\s*<(.*)>$', sn)
+    if m:
+        teile = [t.strip() for t in m.group(2).split(',')]
+        name = ' '.join(x for x in [fn, m.group(1)] + [t for t in teile if ORDNUNG.match(t)] if x)
+        titel = [t for t in teile if t in TITEL]
+        land = [t for t in teile if t not in TITEL and not ORDNUNG.match(t)]
+        if titel:
+            return f"{name}, {titel[0]}" + (f" von {', '.join(land)}" if land else '')
+        return None
+    woerter = fn.replace(';', ' ').replace(',', ' ').split()
+    if woerter and woerter[0] in TITEL and len(sn.split()) >= 2:
+        *vorname, land = sn.split()
+        ordnung = [w for w in woerter[1:] if ORDNUNG.match(w)]
+        return f"{' '.join(vorname + ordnung)}, {woerter[0]} von {land}"
+    m = re.match(r'^(.+),\s*(\w+)$', sn)
+    if m and m.group(2) in TITEL and fn:
+        return f'{fn}, {m.group(2)} von {m.group(1)}'
+    m = re.match(r'^(\w+) von (.+)$', sn)
+    if m and m.group(1) in TITEL and fn:
+        return f'{fn}, {sn}'
+    return None
 
 
 def kopf_lesen(quelle, k):
@@ -1132,6 +1175,8 @@ def main():
     ap.add_argument('--nur', nargs='*', help='nur diese Werke (DTA-Kürzel), zum Testen')
     ap.add_argument('--limit', type=int, help='nur die ersten N Werke, zum Testen')
     ap.add_argument('--jobs', type=int, default=os.cpu_count() or 2)
+    ap.add_argument('--nur-metadaten', action='store_true',
+                    help='nur Metadaten und Index neu schreiben, Passagen unverändert lassen')
     a = ap.parse_args()
 
     if a.download:
@@ -1157,6 +1202,12 @@ def main():
     schluessel = [k for k in schluessel if k in metas]
     print(f'{len(metas)} Werke {JAHR_MIN}–{JAHR_MAX} ({time.time() - t0:.0f} s)', file=sys.stderr)
 
+    os.makedirs(os.path.join(a.out, 'passages'), exist_ok=True)
+    personen = autorentabelle(metas)
+    if a.nur_metadaten:
+        metadaten_erneuern(a.out, metas, personen, t0)
+        return
+
     # 2. Verbreitung der Titelwörter im ganzen Korpus
     alle_staemme = {stamm(w) for m in metas.values() for w in titelwoerter(m['titel'])}
     df = collections.Counter()
@@ -1169,29 +1220,83 @@ def main():
           f'(in ≤ {grenze} Werken) ({time.time() - t0:.0f} s)', file=sys.stderr)
 
     # 3. Passagen
-    os.makedirs(os.path.join(a.out, 'passages'), exist_ok=True)
-    index, statistik = [], collections.Counter()
+    statistik = collections.Counter()
     jobs = [(k, tei, norm, metas[k], verraeter, a.seed) for k in schluessel]
     with mp.Pool(a.jobs) as pool:
         for i, (k, passagen, nw, st) in enumerate(pool.imap_unordered(werk_verarbeiten, jobs, chunksize=2)):
-            m = {x: y for x, y in metas[k].items() if not x.startswith('_')}
             statistik.update(st)
             if (i + 1) % 100 == 0:
                 print(f'  {i + 1}/{len(jobs)} ({time.time() - t0:.0f} s)', file=sys.stderr)
             if not passagen:
                 statistik['ohne_passagen'] += 1
                 continue
-            werk = dict(m)
+            werk = werk_metadaten(metas[k], personen)
             werk['passagen'] = passagen
             with open(os.path.join(a.out, 'passages', f'{k}.json'), 'w', encoding='utf-8') as f:
                 json.dump(werk, f, ensure_ascii=False, separators=(',', ':'))
-            eintrag = {x: m[x] for x in ('id', 'autor', 'titel', 'jahr', 'gattung', 'untergattung')}
-            eintrag['n'] = len(passagen)
-            eintrag['norm'] = sum(1 for p in passagen if p['norm'])
-            index.append(eintrag)
+    index = index_schreiben(a.out, metas, personen)
+    print(f"Fertig: {len(index)} Werke, {statistik['passagen']} Passagen, davon {statistik['norm']} "
+          f"mit normalisierter Fassung; {statistik['ohne_passagen']} Werke ohne Passage "
+          f'({time.time() - t0:.0f} s)', file=sys.stderr)
+    print('Verworfene Kandidaten: ' + ', '.join(f'{k[10:]} {v}' for k, v in sorted(statistik.items())
+                                              if k.startswith('abgelehnt_')), file=sys.stderr)
+
+
+def _schluessel(person):
+    return person['gnd'] or 'name:' + person['name']
+
+
+def autorentabelle(metas):
+    """Eine Zeile je Person (über die GND-Nummer zusammengeführt), mit dem
+    häufigsten Namen als Anzeigenamen und den übrigen Schreibungen als Alias."""
+    namen = collections.defaultdict(collections.Counter)
+    alias = collections.defaultdict(set)
+    for m in metas.values():
+        for p in m['_autoren']:
+            namen[_schluessel(p)][p['name']] += 1
+            alias[_schluessel(p)].update(p['alias'])
+    personen = {}
+    for k, zaehler in namen.items():
+        name = sorted(zaehler.items(), key=lambda x: (-x[1], -len(x[0])))[0][0]
+        personen[k] = {'name': name, 'alias': sorted((set(zaehler) | alias[k]) - {name})}
+    personen['anonym'] = {'name': 'Anonym', 'alias': []}
+    return personen
+
+
+def werk_metadaten(meta, personen):
+    m = {x: y for x, y in meta.items() if not x.startswith('_')}
+    schluessel = [_schluessel(p) for p in meta['_autoren']] or ['anonym']
+    m['autor'] = ' / '.join(dict.fromkeys(personen[k]['name'] for k in schluessel))
+    return m
+
+
+def index_schreiben(out, metas, personen):
+    """Schreibt data/passages.json aus den vorhandenen Werkdateien."""
+    tabelle = sorted(personen, key=lambda k: klein(personen[k]['name']))
+    nummer = {k: i for i, k in enumerate(tabelle)}
+    index = []
+    for k, meta in metas.items():
+        pfad = os.path.join(out, 'passages', f'{k}.json')
+        if not os.path.exists(pfad):
+            continue
+        with open(pfad, encoding='utf-8') as f:
+            passagen = json.load(f)['passagen']
+        m = werk_metadaten(meta, personen)
+        eintrag = {x: m[x] for x in ('id', 'autor', 'titel', 'jahr', 'gattung', 'untergattung')}
+        eintrag['a'] = [nummer[_schluessel(p)] for p in meta['_autoren']] or [nummer['anonym']]
+        eintrag['n'] = len(passagen)
+        eintrag['norm'] = sum(1 for p in passagen if p['norm'])
+        index.append(eintrag)
     index.sort(key=lambda e: (e['jahr'], e['id']))
+    benutzt = {i for e in index for i in e['a']}
+    autoren = []
+    for i, k in enumerate(tabelle):
+        p = personen[k]
+        autoren.append({'name': p['name'], 'alias': p['alias']} if p['alias'] else {'name': p['name']})
+        if i not in benutzt:
+            autoren[-1]['ohne_passage'] = True
     gesamt = {
-        'version': 1,
+        'version': 2,
         'erzeugt': time.strftime('%Y-%m-%d'),
         'quelle': {
             'name': 'Deutsches Textarchiv, Kernkorpus',
@@ -1202,16 +1307,32 @@ def main():
             'lizenz_url': 'https://creativecommons.org/licenses/by-sa/4.0/deed.de',
             'seite': SEITE_URL,
         },
+        'autoren': autoren,
         'werke': index,
     }
-    with open(os.path.join(a.out, 'passages.json'), 'w', encoding='utf-8') as f:
+    with open(os.path.join(out, 'passages.json'), 'w', encoding='utf-8') as f:
         json.dump(gesamt, f, ensure_ascii=False, separators=(',', ':'))
-    print(f"Fertig: {len(index)} Werke, {statistik['passagen']} Passagen, davon {statistik['norm']} "
-          f"mit normalisierter Fassung; {statistik['ohne_passagen']} Werke ohne Passage "
-          f'({time.time() - t0:.0f} s)', file=sys.stderr)
-    print('Verworfene Kandidaten: ' + ', '.join(f'{k[10:]} {v}' for k, v in sorted(statistik.items())
-                                              if k.startswith('abgelehnt_')), file=sys.stderr)
+    return index
 
+
+def metadaten_erneuern(out, metas, personen, t0):
+    """Nur Metadaten in den vorhandenen Werkdateien und den Index neu schreiben;
+    die Auswahl der Passagen bleibt unverändert."""
+    n = 0
+    for k, meta in metas.items():
+        pfad = os.path.join(out, 'passages', f'{k}.json')
+        if not os.path.exists(pfad):
+            continue
+        with open(pfad, encoding='utf-8') as f:
+            werk = json.load(f)
+        neu = werk_metadaten(meta, personen)
+        neu['passagen'] = werk['passagen']
+        with open(pfad, 'w', encoding='utf-8') as f:
+            json.dump(neu, f, ensure_ascii=False, separators=(',', ':'))
+        n += 1
+    index = index_schreiben(out, metas, personen)
+    print(f'Metadaten von {n} Werken erneuert, Index mit {len(index)} Werken ({time.time() - t0:.0f} s)',
+          file=sys.stderr)
 
 if __name__ == '__main__':
     main()
