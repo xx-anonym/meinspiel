@@ -26,6 +26,7 @@ Ein lokaler Server ist nötig, weil der Browser die JSON-Dateien nicht von
 
 | | |
 | --- | --- |
+| **Texte** | **Bekannte Autoren** (Voreinstellung): nur Werke von rund 120 Autorinnen und Autoren, die man kennen kann, von Opitz und Gryphius über Lessing, Goethe, Kant und Humboldt bis Fontane, Marx, Nietzsche und Röntgen (394 Werke, 4.378 Passagen). Die Liste ist von Hand gewählt und steht in `scripts/kanon.txt`. **Ganzes Korpus**: alle 1.450 Werke, auch Predigten, Rechtsbücher, Chemie und Ratgeber von heute vergessenen Verfassern. |
 | **Bewegung** | **Moving**: Über und unter der Passage holt man sich den Absatz davor oder danach dazu (je bis zu zwei Schritte). Jeder Schritt kostet 10 % der möglichen Punkte. **No Move**: nur die Passage. **NMPZ**: nur ein einzelner Satz. |
 | **Schreibung** | **Original**: wie im Druck (ſ, uͤ, ꝛc., Virgeln). **Moderne Typografie**: ſ → s, uͤ/aͤ/oͤ → ü/ä/ö, ꝛ → r, ꝛc. → etc., dañ → dann, Virgel → Komma, „HErꝛ“ → „Herr“, J/V am Wortanfang vor Konsonant → I/U („Jch“ → „Ich“, „vnd“ → „und“). Die Rechtschreibung bleibt historisch („seyn“, „Theil“). **Normalisiert**: die normalisierte Fassung des DTA in moderner Schreibung. |
 | **Gattung** | Belletristik, Gebrauchsliteratur, Wissenschaft (Mehrfachauswahl) |
@@ -41,10 +42,13 @@ Die Einstellungen bleiben im Browser gespeichert.
   Jahre, Bild ↑/↓ zehn Jahre, Pos1/Ende springen an den Rand. Vier Ziffern
   setzen das Jahr direkt, z. B. `1774`.
 - **Gattung und Autor** sind freiwillig. Das Autorfeld schlägt beim Tippen
-  Namen aus dem Korpus vor (↑ ↓ und Enter zum Auswählen). Es kennt auch
+  Namen aus dem Korpus vor (↑ ↓ und Enter zum Auswählen), bei „Bekannte
+  Autoren“ nur die Namen dieser Auswahl. Es kennt auch
   Schreibvarianten und Pseudonyme: „Richter“ findet Jean Paul, „Hardenberg“
   Novalis. Wer nicht auswählt, bekommt den Punkt trotzdem, wenn der ganze
-  Name oder ein eindeutiger Nachname („Lessing“) passt.
+  Name oder ein eindeutiger Nachname („Lessing“) passt. Bei gleichen
+  Nachnamen gehen bekannte Autoren vor („Schiller“ ist Friedrich Schiller);
+  bleibt ein Nachname mehrdeutig („Humboldt“), sagt die Auflösung das.
 - **Enter** tippt bzw. geht zur nächsten Runde.
 - Nach der Auflösung darf man kostenlos weiterlesen (Absatz davor/danach).
   Im NMPZ-Modus erscheint dann die ganze Passage mit dem markierten Satz.
@@ -92,11 +96,12 @@ Die Einstellungen bleiben im Browser gespeichert.
 ### Tagesaufgabe und Challenge-Link
 
 - **Tagesaufgabe**: fünf feste Passagen pro Tag (Datum in deutscher Zeit),
-  No Move, Original, ohne Filter. Gewertet wird der erste Versuch; eine
-  Wiederholung zählt nicht für die Statistik.
+  Bekannte Autoren, No Move, Original, ohne Filter. Gewertet wird der erste
+  Versuch; eine Wiederholung zählt nicht für die Statistik.
 - **Challenge-Link**: Nach jedem Spiel erzeugt „Challenge-Link teilen“ eine
   Adresse mit Seed, Einstellungen und den eigenen Punkten je Runde, z. B.
-  `?seed=7onhas1x0qgkh&bew=move&schr=typo&gat=BGW&jh=18&gegen=1112.2759.3183.2073.1650`.
+  `?seed=7onhas1x0qgkh&aus=bekannt&bew=move&schr=typo&gat=BGW&jh=18&gegen=1112.2759.3183.2073.1650`.
+  Links ohne `aus` (aus der Zeit vor der Auswahl) spielen das ganze Korpus.
   Wer den Link öffnet, spielt dieselben fünf Passagen mit denselben Regeln und
   sieht am Ende den Vergleich Runde für Runde. Die Auswahl hängt nur vom Seed,
   den Einstellungen und den Daten ab. Ein Link bleibt gültig, solange
@@ -105,7 +110,7 @@ Die Einstellungen bleiben im Browser gespeichert.
 ### Statistik
 
 Gespeichert im Browser (`localStorage`, Schlüssel `anno.statistik`):
-Bestwerte je Kombination aus Bewegung und Schreibung (mit Filter getrennt),
+Bestwerte je Kombination aus Texten, Bewegung und Schreibung (mit Filter getrennt),
 die letzten 20 Spiele, die Trefferquote bei Gattung und Autor und die
 durchschnittliche Abweichung nach Epoche, Jahrhundert und Gattung,
 jeweils mit der Tendenz zu früh oder zu spät. Die Seite nennt den größten
@@ -241,8 +246,8 @@ python3 scripts/stichproben.py 5 --kontext --norm      # mit Kontext und normali
   "quelle": { "name": "Deutsches Textarchiv, Kernkorpus", "lizenz": "CC BY-SA 4.0",
               "seite": "https://www.deutschestextarchiv.de/book/view/{id}?p={seite}", "…": "…" },
   "autoren": [
-    { "name": "Jean Paul", "alias": ["Johann Paul Friedrich Richter"] },
-    { "name": "Wilhelm Raabe", "alias": ["Jakob Corvinus"] }
+    { "name": "Jean Paul", "alias": ["Johann Paul Friedrich Richter"], "bekannt": true },
+    { "name": "Wilhelm Raabe", "alias": ["Jakob Corvinus"], "bekannt": true }
   ],
   "werke": [
     { "id": "raabe_stopfkuchen_1891", "autor": "Wilhelm Raabe", "titel": "Stopfkuchen",
@@ -257,6 +262,10 @@ je Person, über die GND-Nummer zusammengeführt, mit dem häufigsten Namen und
 den übrigen Schreibungen und Pseudonymen als `alias`. `a` verweist auf die
 Zeilen der Verfasser eines Werks. Regierende Fürsten heißen einheitlich
 „Name Ordnungszahl, Titel von Land“ („Friedrich II., König von Preußen“).
+`bekannt` markiert die Personen aus `scripts/kanon.txt` (Abgleich über Namen
+und Schreibvarianten; das Skript meldet Namen, die es nicht findet). Ein Werk
+gehört zu „Bekannte Autoren“, wenn einer seiner Verfasser markiert ist. Nach
+einer Änderung der Liste genügt `--nur-metadaten`.
 
 `data/passages/<id>.json` enthält dieselben Metadaten (dazu `untertitel`,
 `ort`, `auflage`, `url`, `lizenz`) und die Passagen:
@@ -291,5 +300,6 @@ Regieanweisung mitten in einer Rede steht in `⟨…⟩`.
 | `scripts/build_passages.py` | Vorverarbeitung DTA → JSON |
 | `scripts/schriften.py` | Schrift-Untermengen erzeugen |
 | `scripts/stichproben.py` | Zufällige Passagen als Markdown ausgeben |
+| `scripts/kanon.txt` | Liste der bekannten Autoren |
 | `STICHPROBEN.md` | 20 Stichproben zur Kontrolle (Stufe 1) |
 | `CREDITS.md` | Quellen und Lizenzen |

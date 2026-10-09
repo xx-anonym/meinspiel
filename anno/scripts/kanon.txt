@@ -1,0 +1,136 @@
+# Bekannte Autoren für die Einstellung „Bekannte Autoren“.
+# Eine Person je Zeile, genau so geschrieben wie in der Autorentabelle von
+# data/passages.json (Anzeigename oder eine der Schreibvarianten).
+# Maßstab: Namen, von denen man in der Schule, im Studium oder aus der
+# Allgemeinbildung schon gehört haben kann. Zeilen mit # sind Kommentare.
+# build_passages.py meldet Namen, die es im Korpus nicht findet.
+
+# 17. Jahrhundert
+Martin Opitz
+Andreas Gryphius
+Hans Jakob Christoffel von Grimmelshausen
+Angelus Silesius
+Paul Fleming
+Friedrich von Logau
+Friedrich von Spee
+Christian Hofmann von Hofmannswaldau
+Daniel Casper von Lohenstein
+Abraham a Sancta Clara
+Johannes Kepler
+Publius Vergilius Maro
+
+# 18. Jahrhundert
+Johann Christoph Gottsched
+Christian Fürchtegott Gellert
+Friedrich Gottlieb Klopstock
+Gotthold Ephraim Lessing
+Christoph Martin Wieland
+Johann Joachim Winckelmann
+Moses Mendelssohn
+Immanuel Kant
+Johann Gottfried von Herder
+Johann Wolfgang von Goethe
+Jakob Michael Reinhold Lenz
+Gottfried August Bürger
+Homerus
+John Milton
+Sophie von La Roche
+Karl Philipp Moritz
+Adolph von Knigge
+Georg Forster
+Johann Heinrich Pestalozzi
+Friedrich Schiller
+Leonhard Euler
+Leopold Mozart
+Carl Philipp Emanuel Bach
+Friedrich II., König von Preußen
+August von Kotzebue
+
+# Um 1800 und Romantik
+Jean Paul
+Friedrich Hölderlin
+Novalis
+Ludwig Tieck
+August Wilhelm von Schlegel
+Friedrich von Schlegel
+Johann Gottlieb Fichte
+Friedrich Wilhelm Joseph von Schelling
+Georg Wilhelm Friedrich Hegel
+Friedrich Schleiermacher
+Heinrich von Kleist
+E. T. A. Hoffmann
+Achim von Arnim
+Clemens Brentano
+Bettina von Arnim
+Joseph von Eichendorff
+Adelbert von Chamisso
+Jacob Grimm
+Wilhelm Grimm
+Johann Peter Hebel
+Ludwig Uhland
+Wilhelm Hauff
+Theodor Körner
+Alexander von Humboldt
+Wilhelm von Humboldt
+Carl von Clausewitz
+Carl Friedrich Gauß
+Samuel Hahnemann
+Johann Peter Eckermann
+
+# Vormärz und Biedermeier
+Heinrich Heine
+Ludwig Börne
+Georg Büchner
+Christian Dietrich Grabbe
+Friedrich Rückert
+Nikolaus Lenau
+Eduard Mörike
+Annette von Droste-Hülshoff
+Franz Grillparzer
+Johann Nestroy
+Adalbert Stifter
+Jeremias Gotthelf
+August Heinrich Hoffmann von Fallersleben
+Ludwig Feuerbach
+Georg Simon Ohm
+Justus von Liebig
+Louis Jacques Mandé Daguerre
+
+# Realismus bis 1900
+Friedrich Hebbel
+Gottfried Keller
+Theodor Storm
+Theodor Fontane
+Wilhelm Raabe
+Conrad Ferdinand Meyer
+Paul Heyse
+Wilhelm Busch
+Karl May
+Johanna Spyri
+Henriette Davidis
+Peter Rosegger
+Arno Holz
+Gerhart Hauptmann
+Frank Wedekind
+Arthur Schnitzler
+Hugo von Hofmannsthal
+Stefan George
+Karl Marx
+Friedrich Nietzsche
+Richard Wagner
+Otto von Bismarck
+Leopold von Ranke
+Theodor Mommsen
+Heinrich Schliemann
+Charles Darwin
+Gregor Mendel
+Ernst Haeckel
+Alfred Edmund Brehm
+Hermann von Helmholtz
+Rudolf Virchow
+Ignaz Philipp Semmelweis
+Robert Koch
+Werner von Siemens
+Otto Lilienthal
+Wilhelm Conrad Röntgen
+Max Planck

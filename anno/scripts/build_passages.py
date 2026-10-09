@@ -1270,6 +1270,15 @@ def werk_metadaten(meta, personen):
     return m
 
 
+def kanon_lesen():
+    """Namen aus scripts/kanon.txt (bekannte Autoren), ohne Kommentare und Leerzeilen."""
+    pfad = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'kanon.txt')
+    if not os.path.exists(pfad):
+        return set()
+    with open(pfad, encoding='utf-8') as f:
+        return {z.strip() for z in f if z.strip() and not z.lstrip().startswith('#')}
+
+
 def index_schreiben(out, metas, personen):
     """Schreibt data/passages.json aus den vorhandenen Werkdateien."""
     tabelle = sorted(personen, key=lambda k: klein(personen[k]['name']))
@@ -1289,12 +1298,20 @@ def index_schreiben(out, metas, personen):
         index.append(eintrag)
     index.sort(key=lambda e: (e['jahr'], e['id']))
     benutzt = {i for e in index for i in e['a']}
+    kanon = kanon_lesen()
+    gefunden = set()
     autoren = []
     for i, k in enumerate(tabelle):
         p = personen[k]
         autoren.append({'name': p['name'], 'alias': p['alias']} if p['alias'] else {'name': p['name']})
         if i not in benutzt:
             autoren[-1]['ohne_passage'] = True
+        treffer = kanon & ({p['name']} | set(p['alias']))
+        if treffer:
+            autoren[-1]['bekannt'] = True
+            gefunden |= treffer
+    if kanon - gefunden:
+        print('kanon.txt: nicht im Korpus: ' + ', '.join(sorted(kanon - gefunden)), file=sys.stderr)
     gesamt = {
         'version': 2,
         'erzeugt': time.strftime('%Y-%m-%d'),

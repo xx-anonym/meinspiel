@@ -39,7 +39,12 @@ const SCHREIBUNG = {
   typo: { name: 'Moderne Typografie', text: 'Rundes s, ä/ö/ü, Komma statt Virgel, I und U statt J und V am Wortanfang. Die Rechtschreibung bleibt historisch.' },
   norm: { name: 'Normalisiert', text: 'Moderne Schreibung (Normalisierung des DTA). Es bleiben nur Wortschatz, Satzbau und Stil.' },
 };
+const AUSWAHL = {
+  bekannt: { name: 'Bekannte Autoren', text: 'Nur Autoren, die man kennen kann: von Gryphius über Lessing, Goethe und Kant bis Fontane, Darwin und Nietzsche.' },
+  alle: { name: 'Ganzes Korpus', text: 'Alle Werke des DTA-Kernkorpus, auch Predigten, Rechtsbücher, Chemie und Ratgeber von Verfassern, die heute kaum jemand kennt.' },
+};
 const STANDARD = Object.freeze({
+  auswahl: 'bekannt',
   bewegung: 'nomove',
   schreibung: 'original',
   gattungen: [...GATTUNGEN],
@@ -215,6 +220,7 @@ function pruefen(e) {
   const g = (e && Array.isArray(e.gattungen) ? e.gattungen : []).filter((x) => GATTUNGEN.includes(x));
   const j = (e && Array.isArray(e.jh) ? e.jh : []).filter((x) => JAHRHUNDERTE.some((h) => h.id === x));
   return {
+    auswahl: e && e.auswahl in AUSWAHL ? e.auswahl : STANDARD.auswahl,
     bewegung: e && e.bewegung in BEWEGUNG ? e.bewegung : STANDARD.bewegung,
     schreibung: e && e.schreibung in SCHREIBUNG ? e.schreibung : STANDARD.schreibung,
     gattungen: g.length ? GATTUNGEN.filter((x) => g.includes(x)) : [...GATTUNGEN],
@@ -245,10 +251,11 @@ function filterText(e) {
 const satz = (t) => (t.endsWith('.') ? t : `${t}.`);
 
 function modusText(e) {
-  return [BEWEGUNG[e.bewegung].name, SCHREIBUNG[e.schreibung].name, filterText(e)].filter(Boolean).join(' · ');
+  return [AUSWAHL[e.auswahl].name, BEWEGUNG[e.bewegung].name, SCHREIBUNG[e.schreibung].name, filterText(e)].filter(Boolean).join(' · ');
 }
 
 function werkPasst(w, e) {
+  if (e.auswahl === 'bekannt' && !w.bekannt) return false;
   if (!e.gattungen.includes(w.gattung)) return false;
   if (!JAHRHUNDERTE.some((h) => e.jh.includes(h.id) && w.jahr >= h.von && w.jahr <= h.bis)) return false;
   return (e.schreibung === 'norm' ? w.norm : w.n) > 0;
@@ -259,6 +266,7 @@ function werkPasst(w, e) {
 let indexDaten = null;
 let autorSuche = [];
 let nachnamen = new Map();
+let nachnamenBekannt = new Map();
 const werkCache = new Map();
 
 async function json(url) {
@@ -270,17 +278,21 @@ async function json(url) {
 async function ladeIndex() {
   if (!indexDaten) {
     indexDaten = await json('data/passages.json');
+    for (const w of indexDaten.werke) w.bekannt = w.a.some((i) => indexDaten.autoren[i].bekannt);
     autorSuche = indexDaten.autoren.map((a, i) => ({
       i,
+      bekannt: Boolean(a.bekannt),
       name: a.name,
       f: falten(a.name),
       alias: (a.alias || []).map((x) => ({ name: x, f: falten(x) })),
     }));
     // Nachname (vor einem Komma wie in „Eberhard Ludwig, Herzog von Württemberg“): eindeutig?
     nachnamen = new Map();
+    nachnamenBekannt = new Map();
     for (const a of autorSuche) {
       const n = falten(a.name.split(',')[0]).split(' ').pop();
-      nachnamen.set(n, nachnamen.has(n) ? -1 : a.i);
+      nachnamen.set(n, nachnamen.has(n) ? -2 : a.i);
+      if (a.bekannt) nachnamenBekannt.set(n, nachnamenBekannt.has(n) ? -2 : a.i);
     }
   }
   return indexDaten;
@@ -339,11 +351,13 @@ async function passagenWaehlen(seed, e) {
 
 // ---------------------------------------------------------------- Autoren
 
-function autorVorschlaege(text, max = 8) {
+// Mit nurBekannt nur Autoren der Auswahl „Bekannte Autoren“
+function autorVorschlaege(text, max = 8, nurBekannt = false) {
   const f = falten(text);
   if (!f) return [];
   const treffer = [];
   for (const a of autorSuche) {
+    if (nurBekannt && !a.bekannt) continue;
     let rang = null;
     let ueber = null;
     const wortanfang = (x) => x.split(' ').some((w) => w.startsWith(f));
@@ -359,14 +373,16 @@ function autorVorschlaege(text, max = 8) {
   return treffer.slice(0, max);
 }
 
-// Index des Autors zu einer Eingabe; -1, wenn der Name nicht im Korpus steht; null bei leerer Eingabe
+// Index des Autors zu einer Eingabe; null bei leerer Eingabe, -1, wenn der Name nicht im Korpus
+// steht, -2, wenn ein bloßer Nachname mehrere Personen meint. Bei Nachnamen gehen bekannte
+// Autoren vor: „Schiller“ ist Friedrich Schiller.
 function autorFinden(text) {
   const f = falten(text);
   if (!f) return null;
   const genau = autorSuche.find((a) => a.f === f || a.alias.some((x) => x.f === f));
   if (genau) return genau.i;
-  const n = nachnamen.get(f);
-  return n !== undefined && n >= 0 ? n : -1;
+  const n = nachnamenBekannt.get(f) ?? nachnamen.get(f);
+  return n === undefined ? -1 : n;
 }
 
 // ---------------------------------------------------------------- Text
@@ -699,18 +715,33 @@ const STAT_LEER = () => ({
   verlauf: [],
 });
 
+// Schlüssel für Bestwerte: Bewegung|Schreibung|Auswahl[|gefiltert]. Ältere Schlüssel ohne
+// Auswahl stammen aus der Zeit, als es nur das ganze Korpus gab.
+function schluesselNeu(k) {
+  const t = k.split('|');
+  if (!(t[2] in AUSWAHL)) t.splice(2, 0, 'alle');
+  return t.join('|');
+}
+
 function statistikLesen() {
   const st = speicher.lesen('anno.statistik', null);
-  return st && st.v === 1 ? { ...STAT_LEER(), ...st } : STAT_LEER();
+  if (!st || st.v !== 1) return STAT_LEER();
+  const beste = {};
+  for (const [k, b] of Object.entries(st.beste || {})) {
+    const neu = schluesselNeu(k);
+    if (!beste[neu] || b.punkte > beste[neu].punkte) beste[neu] = b;
+  }
+  const verlauf = (st.verlauf || []).map((v) => ({ ...v, modus: schluesselNeu(v.modus) }));
+  return { ...STAT_LEER(), ...st, beste, verlauf };
 }
 
 const epocheVon = (jahr) => (EPOCHEN.find((e) => jahr >= e.von && jahr <= e.bis) || EPOCHEN[EPOCHEN.length - 1]).name;
 const jhVon = (jahr) => (JAHRHUNDERTE.find((h) => jahr >= h.von && jahr <= h.bis) || JAHRHUNDERTE[2]).name;
-const bestSchluessel = (e) => `${e.bewegung}|${e.schreibung}${istStandardFilter(e) ? '' : '|gefiltert'}`;
+const bestSchluessel = (e) => `${e.bewegung}|${e.schreibung}|${e.auswahl}${istStandardFilter(e) ? '' : '|gefiltert'}`;
 
 function bestName(schluessel) {
-  const [b, s, f] = schluessel.split('|');
-  return [BEWEGUNG[b]?.name, SCHREIBUNG[s]?.name, f && 'mit Filter'].filter(Boolean).join(' · ');
+  const [b, s, a, f] = schluesselNeu(schluessel).split('|');
+  return [AUSWAHL[a]?.name, BEWEGUNG[b]?.name, SCHREIBUNG[s]?.name, f && 'mit Filter'].filter(Boolean).join(' · ');
 }
 
 // Trägt ein beendetes Spiel ein; gibt zurück, ob es ein neuer Bestwert ist.
@@ -766,6 +797,8 @@ function challengeAusUrl() {
   if (!seed || !/^[\w.-]{1,40}$/.test(seed)) return null;
   const gat = (q.get('gat') || '').split('');
   const einst = pruefen({
+    // Links von vor der Auswahl „Bekannte Autoren“ meinen das ganze Korpus
+    auswahl: q.get('aus') || 'alle',
     bewegung: q.get('bew'),
     schreibung: q.get('schr'),
     gattungen: GATTUNGEN.filter((g) => gat.includes(g[0])),
@@ -782,6 +815,7 @@ function challengeAusUrl() {
 function challengeUrl(sp) {
   const q = new URLSearchParams({
     seed: sp.seed,
+    aus: sp.einst.auswahl,
     bew: sp.einst.bewegung,
     schr: sp.einst.schreibung,
     gat: sp.einst.gattungen.map((g) => g[0]).join(''),
@@ -1019,7 +1053,7 @@ function autorFeld(input, liste, beiWahl) {
     if (aktiv >= 0) input.setAttribute('aria-activedescendant', `autor-${aktiv}`);
   };
   const zeigen = () => {
-    treffer = autorVorschlaege(input.value);
+    treffer = autorVorschlaege(input.value, 8, spiel && spiel.einst.auswahl === 'bekannt');
     aktiv = -1;
     liste.innerHTML = treffer.map((t, i) => `
       <li role="option" id="autor-${i}" data-i="${i}" aria-selected="false">${esc(t.name)}${t.ueber ? `<small>${esc(t.ueber)}</small>` : ''}</li>`).join('');
@@ -1111,6 +1145,7 @@ function tippen() {
   if (erg.autor === null) autorZeile = zeile('Autor', 'kein Tipp', '–', 'leer');
   else if (erg.autor) autorZeile = zeile('Autor', `<span class="richtig">richtig</span> ${esc(autorName)}`, `+${zahl(MAX_AUTOR)}`);
   else if (r.autorTipp === -1) autorZeile = zeile('Autor', `<span class="falsch">daneben</span> „${esc(r.autorText)}“ steht nicht im Korpus`, '0');
+  else if (r.autorTipp === -2) autorZeile = zeile('Autor', `<span class="falsch">daneben</span> „${esc(r.autorText)}“ ist nicht eindeutig, bitte aus der Liste wählen`, '0');
   else autorZeile = zeile('Autor', `<span class="falsch">daneben</span> dein Tipp: ${esc(autorName)}`, '0');
 
   const [, urteilText, urteilStufe] = urteil(erg.abstand);
@@ -1392,6 +1427,11 @@ function startseite() {
       </div>
       <div class="blatt einstellungen">
         <fieldset>
+          <legend>Texte</legend>
+          <div class="wahl" role="radiogroup" aria-label="Texte">${auswahlHtml('auswahl', Object.entries(AUSWAHL).map(([k, v]) => [k, v.name]), e.auswahl, false)}</div>
+          <p class="erklaerung">${esc(AUSWAHL[e.auswahl].text)}</p>
+        </fieldset>
+        <fieldset>
           <legend>Bewegung</legend>
           <div class="wahl" role="radiogroup" aria-label="Bewegung">${auswahlHtml('bewegung', Object.entries(BEWEGUNG).map(([k, v]) => [k, v.name]), e.bewegung, false)}</div>
           <p class="erklaerung">${esc(BEWEGUNG[e.bewegung].text)}</p>
@@ -1441,6 +1481,11 @@ function startseite() {
             ebenso Stellen, die Autor, Titel oder das Erscheinungsjahr nennen. Die Silbentrennung am Zeilenende ist aufgelöst, sonst
             steht alles so da wie im Druck. Gewertet wird das Erscheinungsjahr des digitalisierten Drucks; ist es eine spätere Auflage,
             steht das in der Auflösung.</p>
+          <p><strong>Bekannte Autoren.</strong> Die Voreinstellung zieht nur aus Werken von<span id="kanon-umfang"></span> Autorinnen
+            und Autoren, die man aus Schule, Studium oder Allgemeinbildung kennen kann: Dichter von Opitz bis Hofmannsthal,
+            Philosophen von Kant bis Nietzsche, dazu bekannte Namen aus Wissenschaft und Geschichte wie Humboldt, Gauß, Darwin,
+            Röntgen oder Bismarck. Die Auswahl ist von Hand getroffen und steht in <code>scripts/kanon.txt</code>.
+            „Ganzes Korpus“ spielt mit allen Werken.</p>
           <p><strong>Wertung.</strong> Jahr: ${zahl(MAX_JAHR)} · e<sup>−Abstand/${ABFALL}</sup>, also etwa 3.000 Punkte bei 10 Jahren Abstand,
             2.000 bei 25, 950 bei 50 und 230 bei 100. Gattung und Autor bringen je ${zahl(MAX_GATTUNG)} Punkte. Im Modus Moving kostet
             jeder zusätzliche Absatz 10 % der möglichen Punkte.</p>
@@ -1481,9 +1526,8 @@ function startseite() {
         const an = Array.isArray(einstellungen[feld]) ? einstellungen[feld].includes(c.dataset.wert) : einstellungen[feld] === c.dataset.wert;
         c.setAttribute('aria-checked', String(an));
       }
-      if (feld === 'bewegung' || feld === 'schreibung') {
-        chip.closest('fieldset').querySelector('.erklaerung').textContent = (feld === 'bewegung' ? BEWEGUNG : SCHREIBUNG)[einstellungen[feld]].text;
-      }
+      const texte = { auswahl: AUSWAHL, bewegung: BEWEGUNG, schreibung: SCHREIBUNG }[feld];
+      if (texte) chip.closest('fieldset').querySelector('.erklaerung').textContent = texte[einstellungen[feld]].text;
       info();
     });
   }
@@ -1497,6 +1541,13 @@ function startseite() {
     const passagen = index.werke.reduce((s, w) => s + w.n, 0);
     const umfang = $('#umfang');
     if (umfang) umfang.textContent = `; im Spiel ${zahl(index.werke.length)} Werke mit ${zahl(passagen)} Passagen`;
+    const kanon = $('#kanon-umfang');
+    if (kanon) {
+      const bekannt = index.autoren.filter((a) => a.bekannt && !a.ohne_passage).length;
+      const werke = index.werke.filter((w) => w.bekannt);
+      kanon.textContent = ` ${zahl(bekannt)}`;
+      kanon.title = `${zahl(werke.length)} Werke, ${zahl(werke.reduce((s, w) => s + w.n, 0))} Passagen`;
+    }
     info();
   }).catch(() => {});
 }
