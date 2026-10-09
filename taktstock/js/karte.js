@@ -151,10 +151,10 @@ export class Karte {
       if (i < sperre) continue;
       const a = this.bpm(i - 2), b = this.bpm(i + 6);
       const v = b / a;
-      if (v > 1.25) { out.push({ schlag: i + 1, text: 'più mosso!', art: 'tempo' }); sperre = i + 12; }
-      else if (v < 0.8) { out.push({ schlag: i + 1, text: 'meno mosso', art: 'tempo' }); sperre = i + 12; }
-      else if (v > 1.09) { out.push({ schlag: i, text: 'accel.', art: 'tempo' }); sperre = i + 12; }
-      else if (v < 0.91) { out.push({ schlag: i, text: 'rit.', art: 'tempo' }); sperre = i + 12; }
+      if (v > 1.25) { out.push({ schlag: i + 1, text: 'Più mosso – schneller!', art: 'tempo' }); sperre = i + 12; }
+      else if (v < 0.8) { out.push({ schlag: i + 1, text: 'Meno mosso – langsamer', art: 'tempo' }); sperre = i + 12; }
+      else if (v > 1.09) { out.push({ schlag: i, text: 'Accelerando', art: 'tempo' }); sperre = i + 12; }
+      else if (v < 0.91) { out.push({ schlag: i, text: 'Ritardando', art: 'tempo' }); sperre = i + 12; }
     }
     for (const f of this.fermaten) if (f >= this.start && f <= this.ende) out.push({ schlag: f, text: 'Fermate – halten!', art: 'fermate' });
     for (const h of eigene) {

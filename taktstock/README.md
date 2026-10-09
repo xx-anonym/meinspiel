@@ -36,7 +36,7 @@ nach der Erlaubnis für die Bewegungssensoren.
 
 Die Partitur oben zeigt:
 - die Takte;
-- die Anweisungen (*accel.*, *rit.*, *pp* bis *ff*, Crescendo-Gabeln, „Fermate – halten!“ und Bemerkungen zum Stück);
+- die Anweisungen (*Accelerando*, *Ritardando*, *pp* bis *ff*, Crescendo-Gabeln, „Fermate – halten!“ und Bemerkungen zum Stück);
 - die Zielkurve des Tempos (gold gestrichelt) und dein Tempo (dunkel);
 - als helles Band die Lautheit der Originalaufnahme.
 

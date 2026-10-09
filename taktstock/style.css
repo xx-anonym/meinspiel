@@ -377,6 +377,8 @@ h2::after { content: ""; display: block; width: 48px; height: 2px; background: v
 .balken i { display: block; height: 100%; width: 0; background: var(--gold); transition: width 0.2s; }
 .regler { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
 .regler input { width: 100%; accent-color: var(--gold); }
+.schalter { display: flex; align-items: center; gap: 10px; margin: 14px 0 4px; font-weight: 600; }
+.schalter input { width: 20px; height: 20px; accent-color: var(--gold); }
 .regler input[type="text"] { font: inherit; color: var(--text); background: rgba(242, 231, 207, 0.06); border: 1px solid var(--linie); border-radius: 10px; padding: 0.5em 0.7em; }
 
 /* ------------------------------------------------------------ Einmessen */

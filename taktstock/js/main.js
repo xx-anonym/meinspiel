@@ -13,6 +13,7 @@ import { autoKarte } from './autokarte.js';
 const app = document.getElementById('app');
 const klang = new Klang();
 let einst = speicher.einstellungen();
+klang.direktModus = !!einst.direkt; // gilt bis zum Neuladen
 let laufend = null; // aktuelle Vorstellung
 
 const MODI = {
@@ -340,31 +341,32 @@ async function vorstellung(stueck, { frei }) {
     if (b.dataset.akt === 'nochmal') { vorstellung(stueck, { frei }); return; }
   };
 
-  async function bereitMachen(l, knopf) {
+  // Alles, was eine Nutzergeste braucht (Ton, Sensoren), passiert synchron im Klick.
+  function bereitMachen(l, knopf) {
     knopf.disabled = true;
-    if (modus === 'handy') {
-      const r = await Eingabe.bewegungErlauben();
-      if (r !== 'ok') {
-        zeigeHinweis(hinweis, `<p>${r === 'unsicher' ? 'Bewegungssensoren gibt es nur über HTTPS.' : 'Kein Zugriff auf die Bewegungssensoren.'} Du kannst stattdessen tippen.</p><button class="haupt" data-akt="bereit" data-kein-schlag>Mit Tippen weiter</button>`);
-        einst.modus = 'tippen';
-        l.modus = 'tippen';
-        orchester.setzeModus('tippen');
-        return;
-      }
-    }
-    await klang.start();
+    klang.weckenSofort();
     klang.verbinde(audio);
     klang.effekteZuruecksetzen();
     klang.blende(0, 0.01);
-    // Element freischalten (iOS): einmal aus der Geste heraus abspielen
-    try {
-      await Promise.race([audio.play(), new Promise((r) => setTimeout(r, 1500))]);
-    } catch { /* egal */ }
-    audio.pause();
-    audio.currentTime = 0;
-    if (!l.aktiv) return;
-    klang.murmeln(true);
-    starten(l);
+    const abspielen = audio.play();
+    const sensor = l.modus === 'handy' ? Eingabe.bewegungErlauben() : Promise.resolve('ok');
+    (async () => {
+      const r = await sensor;
+      try { await Promise.race([abspielen, new Promise((ok) => setTimeout(ok, 1500))]); } catch { /* egal */ }
+      audio.pause();
+      audio.currentTime = 0;
+      if (!l.aktiv) return;
+      if (r !== 'ok') {
+        zeigeHinweis(hinweis, `<p>${r === 'unsicher' ? 'Bewegungssensoren gibt es nur über HTTPS.' : 'Kein Zugriff auf die Bewegungssensoren.'} Du kannst stattdessen tippen.</p><button class="haupt" data-akt="bereit" data-kein-schlag>Mit Tippen weiter</button>`);
+        l.modus = 'tippen';
+        orchester.setzeModus('tippen');
+        partitur.setze(karte, { dynamikAktiv: false, frei });
+        return;
+      }
+      await klang.start();
+      klang.murmeln(true);
+      starten(l);
+    })();
   }
 
   function starten(l) {
@@ -389,6 +391,7 @@ async function vorstellung(stueck, { frei }) {
       onTaste: (e) => { if (e.key === 'Escape') titel(); },
     });
     l.eingabe.aktivieren(l.modus);
+    if (navigator.wakeLock) navigator.wakeLock.request('screen').then((w) => { l.wachHalten = w; }).catch(() => {});
     schleife(l);
   }
 }
@@ -606,7 +609,7 @@ function anleitung() {
     <h3>Einsatz</h3>
     <p>Zwei Schläge geben das Tempo vor, beim dritten setzt das Orchester ein. Schlägst du zwei Sekunden lang nicht, wird es langsamer und verstummt.</p>
     <h3>Die Partitur oben</h3>
-    <p>Die goldene, gestrichelte Linie ist das Tempo der Originalaufnahme, die dunkle dein Tempo. Das helle Band zeigt, wie laut die Stelle im Original ist. Anweisungen wie <i>accel.</i>, <i>rit.</i>, <i>pp</i> oder „Fermate – halten!“ kommen von rechts. Bei einer Fermate hörst du auf zu schlagen und gibst erst zum Weiterspielen wieder einen Schlag.</p>
+    <p>Die goldene, gestrichelte Linie ist das Tempo der Originalaufnahme, die dunkle dein Tempo. Das helle Band zeigt, wie laut die Stelle im Original ist. Anweisungen wie <i>Accelerando</i>, <i>Ritardando</i>, <i>pp</i> oder „Fermate – halten!“ kommen von rechts. Bei einer Fermate hörst du auf zu schlagen und gibst erst zum Weiterspielen wieder einen Schlag.</p>
     <h3>Steuerung</h3>
     <p><b>Tippen:</b> Jeder Tipp, Klick oder Druck auf die Leertaste ist ein Schlag. Die Lautstärke spielt das Orchester dann selbst.<br>
     <b>Geste:</b> Führe den Taktstock mit Maus oder Finger. Der tiefste Punkt einer Ab-auf-Bewegung ist der Schlag, die Größe der Bewegung die Lautstärke.<br>
@@ -627,7 +630,11 @@ function einstellungen() {
       <input type="range" min="0" max="350" step="10" value="${einst.latenz || 0}" id="latenz">
     </label>
     <p class="klein">Mit Bluetooth-Kopfhörern hinkt der Ton 150–250 ms hinterher. Stell hier ein, wie viel, dann folgt das Orchester genauer.</p>
+    <label class="schalter"><input type="checkbox" id="direkt" ${einst.direkt ? 'checked' : ''}> Direktwiedergabe ohne Klangeffekte</label>
+    <p class="klein">Nur falls das Tempo auf deinem Gerät nicht deinem Schlag folgt: Dann läuft die Aufnahme am Web-Audio-Mischpult vorbei. Dynamik, Leiern und Aussetzer fallen weg. Wirkt nach dem Neuladen.</p>
     <p class="klein">Eingemessene Beat-Maps der mitgelieferten Stücke liegen in diesem Browser. Zurücksetzen geht im Einmess-Modus des jeweiligen Stücks.</p>`);
+  const dk = inhalt.querySelector('#direkt');
+  dk.onchange = () => { einst.direkt = dk.checked; speicher.einstellungenSpeichern(einst); };
   const n = inhalt.querySelector('#name');
   n.oninput = () => { einst.name = n.value.trim(); speicher.einstellungenSpeichern(einst); };
   const r = inhalt.querySelector('#latenz');
@@ -698,6 +705,7 @@ function aufraeumen() {
     if (laufend.dirigent) laufend.dirigent.abbrechen();
     if (laufend.orchester) laufend.orchester.zerstoeren();
     if (laufend.einmessen) laufend.einmessen.beenden();
+    if (laufend.wachHalten) laufend.wachHalten.release().catch(() => {});
     laufend = null;
   }
   if (klang.ctx) { klang.murmeln(false); klang.effekteZuruecksetzen(); }

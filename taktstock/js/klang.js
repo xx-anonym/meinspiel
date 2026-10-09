@@ -30,16 +30,28 @@ export class Klang {
 
   get bereit() { return !!this.ctx && this.ctx.state === 'running'; }
 
-  // Muss aus einer Nutzergeste heraus aufgerufen werden.
-  async start() {
+  // Synchron aus einer Nutzergeste heraus: Kontext anlegen und anstoßen.
+  weckenSofort() {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AC({ latencyHint: 'interactive' });
       this.#aufbau();
     }
+    if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
+  }
+
+  async start() {
+    this.weckenSofort();
     if (this.ctx.state !== 'running') {
       try { await this.ctx.resume(); } catch { /* bleibt stumm */ }
     }
+  }
+
+  // Direktwiedergabe ohne Web Audio (Notlösung für Geräte, auf denen das
+  // Tempo über MediaElementSource nicht folgt). Keine Effekte, Blende über volume.
+  direkt(audio) {
+    this.direktEl = audio;
+    try { audio.volume = 0; } catch { /* iOS ignoriert volume */ }
   }
 
   // Ausgabeverzögerung in Sekunden, so gut der Browser sie kennt
@@ -99,6 +111,7 @@ export class Klang {
   // ---------- Orchester ----------
 
   verbinde(audio) {
+    if (this.direktModus && !this.quelle) { this.direkt(audio); return; }
     if (this.quelle && this.quelle.el === audio) return;
     const q = this.ctx.createMediaElementSource(audio);
     q.connect(this.wobble);
@@ -111,6 +124,16 @@ export class Klang {
   }
 
   blende(ziel, sekunden = 0.08) {
+    if (this.direktEl && !this.quelle) {
+      const el = this.direktEl, von = el.volume, t0 = performance.now(), dauer = Math.max(10, sekunden * 1000);
+      clearInterval(this.blendTimer);
+      this.blendTimer = setInterval(() => {
+        const f = Math.min(1, (performance.now() - t0) / dauer);
+        try { el.volume = von + (ziel - von) * f; } catch { /* egal */ }
+        if (f >= 1) clearInterval(this.blendTimer);
+      }, 20);
+      return;
+    }
     if (!this.ctx) return;
     const g = this.blendeGain.gain, t = this.ctx.currentTime;
     g.cancelScheduledValues(t);
@@ -320,7 +343,7 @@ export class Klang {
     const start = wann - 0.2;
     const jetzt = this.jetzt();
     const offset = Math.max(0, jetzt - start);
-    this.#quelle(v[i], Math.max(jetzt, start), { gain: 0.25 + 0.75 * laut, rate: zufall(0.96, 1.04), offset });
+    this.#quelle(v[i], Math.max(jetzt, start), { gain: 0.22 + 0.62 * laut, rate: zufall(0.96, 1.04), offset });
   }
 
   applaus(staerke = 1, dauer = 6) {
@@ -366,7 +389,7 @@ export class Klang {
       const t0 = wann + k * zufall(0.17, 0.26);
       const g = c.createGain();
       g.gain.setValueAtTime(0, t0);
-      g.gain.linearRampToValueAtTime(0.55, t0 + 0.008);
+      g.gain.linearRampToValueAtTime(0.75, t0 + 0.008);
       g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.2);
       const bp = c.createBiquadFilter();
       bp.type = 'bandpass';
@@ -425,7 +448,7 @@ export class Klang {
       }
       t += zufall(0.004, 0.03);
     }
-    this.#quelle(b, wann, { gain: 0.32 });
+    this.#quelle(b, wann, { gain: 0.5 });
   }
 
   // Eine einzelne Person klatscht langsam. Gibt Stopp-Funktion zurück.
@@ -457,8 +480,8 @@ export class Klang {
     growlG.gain.value = 0.35;
     const amp = c.createGain();
     amp.gain.setValueAtTime(0, wann);
-    amp.gain.linearRampToValueAtTime(0.32, wann + 0.03);
-    amp.gain.setValueAtTime(0.32, wann + 0.2);
+    amp.gain.linearRampToValueAtTime(0.2, wann + 0.03);
+    amp.gain.setValueAtTime(0.2, wann + 0.2);
     amp.gain.linearRampToValueAtTime(0, wann + 0.42);
     growl.connect(growlG).connect(amp.gain);
     const lp = c.createBiquadFilter();
