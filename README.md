@@ -76,3 +76,5 @@ Bariton, Helden-/Charakterbariton, seriöser Bass, Bassbuffo.
 Das Vorgängerspiel „Da capo!“ liegt in der Git-Historie dieses Branches.
 
 Im Ordner [`taktstock/`](taktstock/) liegt außerdem **Taktstock**, ein Dirigierspiel mit echten Orchesteraufnahmen (eigenes README).
+
+Im Ordner [`anno/`](anno/) liegt **ANNO**, GeoGuessr für die deutsche Sprachgeschichte: Passagen aus echten Drucken von 1600 bis 1900 aus dem Deutschen Textarchiv, das Erscheinungsjahr wird auf einer Zeitleiste geraten (eigenes README).

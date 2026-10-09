@@ -1,0 +1,427 @@
+/* ANNO – ruhig, papierartig, die Schrift im Mittelpunkt. */
+
+@font-face {
+  font-family: 'Anno Garamond';
+  src: url('fonts/AnnoGaramond-Regular.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Anno Garamond';
+  src: url('fonts/AnnoGaramond-Italic.woff2') format('woff2');
+  font-weight: 400; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'Anno Garamond';
+  src: url('fonts/AnnoGaramond-SemiBold.woff2') format('woff2');
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+/* Cardo nur für Zeichen, die EB Garamond fehlen (z. B. ꝛ) */
+@font-face {
+  font-family: 'Anno Cardo';
+  src: url('fonts/AnnoCardo-Regular.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Anno Cardo';
+  src: url('fonts/AnnoCardo-Italic.woff2') format('woff2');
+  font-weight: 400; font-style: italic; font-display: swap;
+}
+
+:root {
+  --papier: #f4f0e6;
+  --blatt: #fbf9f3;
+  --tinte: #24211c;
+  --grau: #6b6458;
+  --hell: #a39a89;
+  --linie: #dcd3c1;
+  --tipp: #2b4f87;
+  --tipp-text: #ffffff;
+  --loesung: #a5371e;
+  --loesung-text: #ffffff;
+  --schatten: 0 1px 2px rgb(70 50 20 / 6%), 0 10px 28px -14px rgb(70 50 20 / 22%);
+  --schrift: 'Anno Garamond', 'Anno Cardo', 'EB Garamond', Garamond, 'Times New Roman', serif;
+  --breite: 40rem;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --papier: #1a1815;
+    --blatt: #22201b;
+    --tinte: #e8e2d4;
+    --grau: #a59d8d;
+    --hell: #6f6858;
+    --linie: #39352d;
+    --tipp: #8fb1ea;
+    --tipp-text: #0f1a2c;
+    --loesung: #ec8c6d;
+    --loesung-text: #2a1007;
+    --schatten: 0 1px 2px rgb(0 0 0 / 30%), 0 10px 28px -14px rgb(0 0 0 / 60%);
+    color-scheme: dark;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--papier);
+  color: var(--tinte);
+  font-family: var(--schrift);
+  font-size: 1.125rem;
+  line-height: 1.5;
+  font-variant-numeric: oldstyle-nums;
+  font-kerning: normal;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-decoration-color: var(--hell); text-underline-offset: .18em; }
+a:hover { text-decoration-color: currentColor; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85em; }
+pre { background: var(--blatt); padding: .6em .8em; border: 1px solid var(--linie); overflow-x: auto; }
+
+:focus-visible { outline: 2px solid var(--tipp); outline-offset: 3px; }
+
+/* ---------------------------------------------------------------- Kopf */
+
+.kopf {
+  max-width: calc(var(--breite) + 2rem);
+  margin: 0 auto;
+  padding: max(.9rem, env(safe-area-inset-top)) 1rem .6rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.marke {
+  font-weight: 600;
+  letter-spacing: .32em;
+  text-decoration: none;
+  font-size: 1rem;
+}
+.stand {
+  display: flex;
+  gap: 1rem;
+  color: var(--grau);
+  font-variant-caps: all-small-caps;
+  letter-spacing: .06em;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.stand-punkte { color: var(--tinte); }
+
+main {
+  max-width: calc(var(--breite) + 2rem);
+  margin: 0 auto;
+  padding: 0 1rem calc(2.5rem + env(safe-area-inset-bottom));
+  outline: none;
+}
+
+/* ---------------------------------------------------------------- Blatt & Passage */
+
+.blatt {
+  background: var(--blatt);
+  border: 1px solid color-mix(in srgb, var(--linie) 70%, transparent);
+  box-shadow: var(--schatten);
+  border-radius: 3px;
+  padding: 1.35rem 1.5rem;
+}
+
+.passage {
+  font-size: 1.25rem;
+  line-height: 1.58;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  overflow-wrap: break-word;
+}
+.passage p { margin: 0; text-align: justify; }
+.passage p + p { text-indent: 1.4em; }
+.passage p.vers, .passage p.rede, .passage p.regie,
+.passage p.vers + p, .passage p.rede + p, .passage p.regie + p {
+  text-indent: 0;
+  margin-top: .65em;
+  text-align: left;
+}
+.passage p.vers { hyphens: manual; -webkit-hyphens: manual; }
+.passage .sprecher {
+  font-variant-caps: all-small-caps;
+  letter-spacing: .07em;
+  margin-right: .15em;
+}
+.passage .rede.vers .sprecher { display: block; }
+.passage .regie { font-style: italic; color: var(--grau); }
+.passage.klein { font-size: 1.05rem; line-height: 1.5; }
+
+/* ---------------------------------------------------------------- Knöpfe */
+
+.knopf {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 3px;
+  border: 1px solid var(--linie);
+  background: var(--blatt);
+  min-height: 44px;
+  touch-action: manipulation;
+}
+.knopf.haupt {
+  background: var(--tinte);
+  color: var(--papier);
+  border-color: var(--tinte);
+  padding: .35em 1.5em .45em;
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: .1em;
+  font-size: 1.15rem;
+}
+.knopf.haupt:disabled { opacity: .3; cursor: default; }
+.knopf.klein {
+  min-width: 46px;
+  padding: 0 .4em;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-size: 1rem;
+}
+.knopf:not(:disabled):active { transform: translateY(1px); }
+.knopf:disabled { cursor: default; }
+
+.weiter-zeile { display: flex; justify-content: center; margin: 1.6rem 0 0; }
+
+/* ---------------------------------------------------------------- Dock */
+
+.dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin: 1.1rem -1rem 0;
+  padding: .55rem 1rem calc(.6rem + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--papier) 93%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border-top: 1px solid var(--linie);
+}
+.dock.fertig { position: static; border-top-color: transparent; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.dock.fertig .fein, .dock.fertig #tippen { display: none; }
+.dock-zeile { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
+.frage {
+  font-variant-caps: all-small-caps;
+  letter-spacing: .07em;
+  color: var(--grau);
+  font-size: 1.1rem;
+}
+.fein { justify-content: center; gap: .45rem; }
+.jahr-anzeige {
+  min-width: 4.2ch;
+  text-align: center;
+  font-size: 1.9rem;
+  line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--hell);
+  margin: 0 .35rem;
+}
+.jahr-anzeige.gesetzt { color: var(--tipp); }
+
+/* ---------------------------------------------------------------- Zeitleiste */
+
+.zl {
+  position: relative;
+  height: 94px;
+  margin: .1rem 0 .2rem;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.zl.gesperrt { cursor: default; }
+.zl-flaeche { position: absolute; inset: 0 24px; }
+.zl-spur {
+  position: absolute; left: 0; right: 0; top: 52px; height: 2px;
+  background: color-mix(in srgb, var(--tinte) 45%, transparent);
+}
+.zl-strich {
+  position: absolute; top: 49px; width: 1px; height: 8px; margin-left: -.5px;
+  background: var(--hell);
+}
+.zl-strich.j50 { top: 46px; height: 14px; }
+.zl-strich.j100 { top: 43px; height: 20px; width: 2px; margin-left: -1px; background: var(--tinte); }
+.zl-zahl {
+  position: absolute; top: 64px; transform: translateX(-50%);
+  font-size: .82rem; line-height: 1; color: var(--grau);
+  font-variant-numeric: lining-nums;
+  pointer-events: none;
+}
+.zl-zahl.j100 { color: var(--tinte); font-weight: 600; }
+
+.zl-pin { position: absolute; width: 2px; margin-left: -1px; pointer-events: none; }
+.zl-pin .zl-fahne {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  padding: .1em .45em .15em;
+  border-radius: 3px;
+  font-size: .95rem; line-height: 1.15;
+  font-variant-numeric: lining-nums tabular-nums;
+  white-space: nowrap;
+}
+.zl-tipp { top: 22px; height: 31px; background: var(--tipp); }
+.zl-tipp .zl-fahne { bottom: 100%; background: var(--tipp); color: var(--tipp-text); }
+.zl-tipp::after, .zl-loesung::after {
+  content: ''; position: absolute; left: 50%; width: 10px; height: 10px; border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.zl-tipp::after { top: 100%; background: var(--tipp); }
+.zl-loesung { top: 53px; height: 9px; background: var(--loesung); }
+.zl-loesung::after { top: 0; background: var(--loesung); }
+.zl-loesung .zl-fahne { top: 100%; background: var(--loesung); color: var(--loesung-text); }
+.zl-loesung.auftauchen { animation: auftauchen .35s cubic-bezier(.2, .9, .3, 1.3); }
+@keyframes auftauchen { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+.zl-strecke {
+  position: absolute; top: 51px; height: 4px; width: 0;
+  background: repeating-linear-gradient(90deg, var(--tinte) 0 7px, transparent 7px 11px);
+  opacity: .8;
+}
+.zl-strecke.laeuft { transition: left .75s cubic-bezier(.25, .8, .25, 1), width .75s cubic-bezier(.25, .8, .25, 1); }
+
+.zl-schatten { position: absolute; top: 30px; height: 22px; width: 1px; background: var(--hell); pointer-events: none; }
+.zl-schatten span {
+  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+  font-size: .85rem; color: var(--grau); font-variant-numeric: lining-nums;
+}
+
+/* ---------------------------------------------------------------- Auflösung */
+
+.ergebnis { margin-top: .6rem; }
+.loesung-kopf { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: .55rem; }
+.loesung-jahr {
+  display: block;
+  font-size: 2.6rem; line-height: 1; color: var(--loesung);
+  font-variant-numeric: lining-nums;
+}
+.abstand { display: block; color: var(--grau); margin-top: .3rem; }
+.punkte { text-align: right; font-variant-numeric: lining-nums tabular-nums; }
+.punkte span { display: block; font-size: 2.6rem; line-height: 1; font-weight: 600; }
+.punkte small { color: var(--grau); font-size: .9rem; }
+.werk-autor {
+  margin: 0;
+  font-variant-caps: all-small-caps;
+  letter-spacing: .06em;
+  font-size: 1.15rem;
+}
+.werk-titel { margin: .1rem 0 .3rem; font-size: 1.3rem; line-height: 1.3; }
+.werk-titel cite { font-style: italic; }
+.werk-titel .untertitel { font-size: .82em; color: var(--grau); }
+.werk-meta { margin: 0; color: var(--grau); }
+.werk-hinweis { margin: .5rem 0 0; font-size: .95rem; color: var(--grau); font-style: italic; }
+.werk-link { margin: .7rem 0 0; }
+
+/* ---------------------------------------------------------------- Start */
+
+.start { padding-top: 1.5rem; }
+.titel {
+  margin: 0;
+  text-align: center;
+  font-weight: 400;
+  font-size: clamp(3.4rem, 15vw, 5.2rem);
+  letter-spacing: .3em;
+  margin-right: -.3em;
+  line-height: 1;
+}
+.unterzeile {
+  text-align: center;
+  margin: .7rem 0 2rem;
+  color: var(--grau);
+  font-style: italic;
+  font-size: 1.2rem;
+}
+.start-text p { text-align: left; }
+.ueber { margin-top: 2.2rem; border-top: 1px solid var(--linie); padding-top: .8rem; }
+.ueber summary {
+  cursor: pointer;
+  font-variant-caps: all-small-caps;
+  letter-spacing: .08em;
+  color: var(--grau);
+}
+.ueber-text { font-size: 1rem; color: var(--tinte); }
+.ueber-text p { margin: .7rem 0; }
+.laden { text-align: center; color: var(--grau); font-style: italic; margin-top: 3rem; }
+.klein { font-size: .9rem; color: var(--grau); }
+.hinweis { text-align: center; }
+
+/* ---------------------------------------------------------------- Auswertung */
+
+.seitentitel {
+  text-align: center;
+  font-weight: 400;
+  font-variant-caps: all-small-caps;
+  letter-spacing: .14em;
+  font-size: 1.5rem;
+  margin: 1rem 0 0;
+  color: var(--grau);
+}
+.gesamt {
+  text-align: center;
+  margin: .2rem 0 0;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.gesamt span { font-size: 3.6rem; font-weight: 600; line-height: 1.1; }
+.gesamt small { display: block; color: var(--grau); font-size: 1rem; }
+.schnitt { text-align: center; color: var(--grau); margin: .3rem 0 1.4rem; font-style: italic; }
+
+.uebersicht { padding: 1rem 1.2rem .8rem; }
+.mini { display: flex; align-items: center; gap: .6rem; height: 26px; }
+.mini-nr { width: 1.1em; text-align: right; color: var(--grau); font-size: .9rem; font-variant-numeric: lining-nums; }
+.mini-spur { position: relative; flex: 1; height: 100%; margin: 0 8px; }
+.mini:not(.mini-achse) .mini-spur::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px;
+  background: var(--linie);
+}
+.mini-strecke {
+  position: absolute; top: 50%; height: 2px; margin-top: -1px;
+  background: repeating-linear-gradient(90deg, var(--tinte) 0 4px, transparent 4px 7px);
+  opacity: .7;
+}
+.mini-punkt {
+  position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.mini-punkt.tipp { background: var(--tipp); }
+.mini-punkt.loesung { background: var(--loesung); }
+.mini-achse { height: 20px; }
+.mini-achse .mini-spur > span {
+  position: absolute; top: 2px; transform: translateX(-50%);
+  font-size: .78rem; color: var(--grau); font-variant-numeric: lining-nums;
+}
+.mini-achse .mini-spur > span.j100 { color: var(--tinte); font-weight: 600; }
+.legende { margin: .5rem 0 0; font-size: .9rem; color: var(--grau); text-align: center; }
+.legende .mini-punkt { position: relative; display: inline-block; transform: none; top: 0; margin: 0 .2em 0 .8em; vertical-align: -.05em; }
+
+.rueckblick { list-style: none; margin: 1.4rem 0 0; padding: 0; display: grid; gap: 1rem; }
+.rb-kopf { display: flex; align-items: baseline; gap: .7rem; }
+.rb-nr { color: var(--grau); font-variant-numeric: lining-nums; }
+.rb-werk { flex: 1; line-height: 1.3; }
+.rb-werk .werk-autor { display: block; font-size: 1.05rem; }
+.rb-werk cite { font-size: 1.15rem; }
+.rb-jahr { color: var(--loesung); font-variant-numeric: lining-nums; white-space: nowrap; }
+.rb-punkte { font-weight: 600; font-variant-numeric: lining-nums tabular-nums; font-size: 1.2rem; }
+.rb-meta { margin: .3rem 0 .8rem; color: var(--grau); font-size: .95rem; }
+
+/* ---------------------------------------------------------------- Handy */
+
+@media (max-width: 34rem) {
+  body { font-size: 1.0625rem; }
+  .blatt { padding: 1.05rem 1.1rem; }
+  .passage { font-size: 1.15rem; line-height: 1.55; }
+  .passage.klein { font-size: 1rem; }
+  .zl-flaeche { inset: 0 20px; }
+  .zl-zahl { font-size: .76rem; }
+  .jahr-anzeige { font-size: 1.7rem; }
+  .knopf.klein { min-width: 44px; }
+  .loesung-jahr, .punkte span { font-size: 2.2rem; }
+  .gesamt span { font-size: 3rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zl-strecke.laeuft { transition: none; }
+  .zl-loesung.auftauchen { animation: none; }
+}
