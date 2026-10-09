@@ -119,6 +119,7 @@ export class Dirigent {
     this.endePhi = (wertung ? karte.ende : karte.anzahl - 1) + 0.02;
     this.stimmung = { streicher: 0.8, holz: 0.8, blech: 0.8 };
     this.stimmungMin = { ...this.stimmung };
+    this.grund = { streicher: null, holz: null, blech: null }; // warum eine Gruppe gerade verliert
     this.pub = { langeweile: 0, laune: 0.6, letzte: 0, einzeln: false, gutGemeldet: 0, schnell: 0 };
     this.stat = {
       punkte: [], tempo: [], unruhe: [], dyn: [], klatsch: [],
@@ -214,7 +215,6 @@ export class Dirigent {
     this.letzterK = k - 1;
     this.startK = k;
     this.letzteKreuzT = null;
-    this.fenster = [];
     this.rate = r0;
     this.faktor = 1;
     this.phase = 0;
@@ -424,11 +424,11 @@ export class Dirigent {
     const fermate = kt.istFermate(k - 1);
     this.verlauf.push({ schlag: k - 1, bpm: fermate ? null : 60 / (kt.dauern[k - 1] / rEff) });
     if (this.verlauf.length > 400) this.verlauf.shift();
-    // Für die Wertung zählt das Tempo über drei Schläge, nicht jeder Einzelschlag
-    this.fenster = (this.fenster || []).concat([{ d: kt.dauern[k - 1], w: wand, fermate }]).slice(-3);
     if (fermate) return;
-    const glatt = this.fenster.filter((x) => !x.fermate);
-    const r3 = glatt.reduce((s, x) => s + x.d, 0) / glatt.reduce((s, x) => s + x.w, 0);
+    // Gewertet wird dein Tempo (geglättet über die letzten Schlagabstände) gegen das
+    // Originaltempo an dieser Stelle – nicht die Phasenkorrektur des Orchesters.
+    const P = this.taktgeber.periode || wand;
+    const r3 = kt.periode[k - 1] / P;
     const tempo = Math.log2(r3); // + zu schnell, − zu langsam
     const dynZiel = kt.zielLaut(k - 1);
     const dynAbw = this.dynamikAktiv ? this.dyn - dynZiel : 0;
@@ -451,13 +451,27 @@ export class Dirigent {
 
     // Stimmung
     const st = this.stimmung;
-    const s = Math.max(0, Math.abs(tempo) - 0.045) / 0.3;
+    const s = Math.max(0, Math.abs(tempo) - 0.07) / 0.3; // bis ~5 % frei
     const schlepp = tempo < 0 ? 1.35 : 1;
     const u = this.unruhe;
     const regen = p > 0.75 ? 0.028 : p > 0.5 ? 0.01 : 0;
-    st.streicher = klemme(st.streicher - 0.075 * u - 0.03 * s + regen, 0, 1);
-    st.holz = klemme(st.holz - (this.dynamikAktiv ? 0.07 * Math.abs(dynAbw) : 0) - 0.045 * s - 0.02 * u + regen, 0, 1);
-    st.blech = klemme(st.blech - 0.05 * s * schlepp - 0.02 * u - 0.06 * klatsch + regen, 0, 1);
+    const tempoText = tempo < 0 ? 'zu langsam' : 'zu schnell';
+    const verluste = {
+      streicher: [[0.075 * u, 'unruhig'], [0.03 * s, tempoText]],
+      holz: [[this.dynamikAktiv ? 0.07 * Math.abs(dynAbw) : 0, dynAbw > 0 ? 'zu laut' : 'zu leise'], [0.045 * s, tempoText], [0.02 * u, 'unruhig']],
+      blech: [[0.05 * s * schlepp, tempoText], [0.02 * u, 'unruhig'], [0.06 * klatsch, 'Saal daneben']],
+    };
+    for (const [g, liste] of Object.entries(verluste)) {
+      const verlust = liste.reduce((a, [v]) => a + v, 0);
+      st[g] = klemme(st[g] - verlust + regen, 0, 1);
+      // Warum verliert die Gruppe? Den größten Posten merken, für die Anzeige
+      if (verlust > regen + 0.004) {
+        const [, text] = liste.reduce((a, b) => (b[0] > a[0] ? b : a));
+        this.grund[g] = { text, t };
+      } else if (this.grund[g] && t - this.grund[g].t > 1.5) {
+        this.grund[g] = null;
+      }
+    }
     for (const g of ['streicher', 'holz', 'blech']) this.stimmungMin[g] = Math.min(this.stimmungMin[g], st[g]);
     this.klang.stimmung(st);
     const gesamt = 0.42 * st.streicher + 0.25 * st.holz + 0.33 * st.blech;

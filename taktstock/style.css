@@ -203,7 +203,9 @@ h2::after { content: ""; display: block; width: 48px; height: 2px; background: v
 .tempo-bpm { font-size: 0.72rem; color: var(--text-leise); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .hud-stimmung { display: flex; flex-direction: column; gap: 3px; justify-self: end; min-width: 120px; }
 .hud-stimmung.aus { visibility: hidden; }
-.stimmung { display: grid; grid-template-columns: 4.6em 1fr; align-items: center; gap: 6px; font-size: 0.68rem; color: var(--text-leise); }
+.stimmung { display: grid; grid-template-columns: 4.6em 1fr; align-items: center; column-gap: 6px; font-size: 0.68rem; color: var(--text-leise); position: relative; }
+.stimmung em { position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); font-style: italic; font-size: 0.7rem; line-height: 1; color: #ff9a8a; white-space: nowrap; }
+.stimmung em:empty { display: none; }
 .stimmung i { display: block; height: 6px; border-radius: 3px; background: rgba(242, 231, 207, 0.12); overflow: hidden; }
 .stimmung b { display: block; height: 100%; width: 80%; background: linear-gradient(90deg, var(--gold-dunkel), var(--gold-hell)); transition: width 0.25s, background 0.25s; }
 .stimmung.schlecht b { background: linear-gradient(90deg, #6a2a22, var(--rot)); }
@@ -216,6 +218,8 @@ h2::after { content: ""; display: block; width: 48px; height: 2px; background: v
   .hud .schliessen { grid-area: zu; }
   .hud-stimmung { grid-area: stimmung; flex-direction: row; justify-self: stretch; gap: 10px; }
   .stimmung { flex: 1; grid-template-columns: auto 1fr; }
+  .stimmung em { right: 0; left: 0; top: 100%; transform: none; margin-top: 3px; text-align: right; font-size: 0.62rem; }
+  .hud { padding-bottom: 14px; }
 }
 
 .saal { position: relative; min-height: 0; touch-action: none; cursor: pointer; overflow: hidden; }

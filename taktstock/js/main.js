@@ -276,7 +276,7 @@ async function vorstellung(stueck, { frei }) {
       <div class="hud-stueck"><b>${h(stueck.titel)}</b><span>${h(stueck.komponist)}${frei ? ' · freies Spiel' : ''}</span></div>
       <div class="hud-tempo" title="Dein Tempo im Verhältnis zur Originalaufnahme"><span class="tempo-label">Tempo</span><span class="tempo-prozent">–</span><span class="tempo-bpm">–</span></div>
       <div class="hud-stimmung ${frei ? 'aus' : ''}">
-        ${['streicher', 'holz', 'blech'].map((g) => `<div class="stimmung" data-g="${g}"><span>${{ streicher: 'Streicher', holz: 'Holz', blech: 'Blech' }[g]}</span><i><b></b></i></div>`).join('')}
+        ${['streicher', 'holz', 'blech'].map((g) => `<div class="stimmung" data-g="${g}"><span>${{ streicher: 'Streicher', holz: 'Holz', blech: 'Blech' }[g]}</span><i><b></b></i><em></em></div>`).join('')}
       </div>
       <button class="schliessen" data-akt="zurueck" aria-label="Abbrechen">✕</button>
     </div>
@@ -481,6 +481,9 @@ function schleife(l) {
         const v = d.stimmung[g];
         e.querySelector('b').style.width = `${Math.round(v * 100)}%`;
         e.classList.toggle('schlecht', v < 0.35);
+        const grund = d.grund[g] && t - d.grund[g].t < 2.5 ? d.grund[g].text : '';
+        const em = e.querySelector('em');
+        if (em.textContent !== grund) em.textContent = grund;
       }
     }
   };
@@ -623,7 +626,11 @@ function anleitung() {
     <b>Geste:</b> Führe den Taktstock mit Maus oder Finger. Der tiefste Punkt einer Ab-auf-Bewegung ist der Schlag, die Größe der Bewegung die Lautstärke.<br>
     <b>Handy:</b> Das Handy selbst ist der Taktstock. Jeder Ruck ist ein Schlag. Das braucht HTTPS und auf dem iPhone eine Erlaubnis.</p>
     <h3>Stimmung</h3>
-    <p>Streicher, Holz und Blech mögen keine unruhigen Schläge und keine großen Abweichungen von der Zielkurve. Schlechte Stimmung hört man: erst dumpfer, dann leiernd, am Ende mit Aussetzern. Das Publikum reagiert ebenfalls.</p>
+    <p>Gemessen wird nach jedem Schlag gegen die Originalaufnahme. Unter der Leiste steht, warum eine Gruppe gerade verliert:</p>
+    <p><b>Streicher</b> verlieren vor allem bei <i>unruhigen</i> Schlägen: wenn deine Abstände schwanken, obwohl die Musik gleichmäßig weitergeht.<br>
+    <b>Holz</b> verliert, wenn du <i>zu schnell</i> oder <i>zu langsam</i> bist, und im Gesten- und Handymodus, wenn deine Bewegung <i>zu laut</i> oder <i>zu leise</i> für die Stelle ist (das helle Band in der Partitur).<br>
+    <b>Blech</b> verliert bei falschem Tempo, am stärksten beim Schleppen, und beim Radetzky, wenn der Saal aus dem Takt klatscht.</p>
+    <p>Bis etwa 5 % Abweichung vom Originaltempo passiert nichts. Wer gut dirigiert, gewinnt Stimmung zurück. Schlechte Stimmung hört man: erst dumpfer, dann leiernd, mit Kieksern, am Ende mit Aussetzern.</p>
     <h3>Eigene Stücke und Einmessen</h3>
     <p>Zieh eine Audiodatei auf die Startseite. Sie bleibt in deinem Browser. Eine automatisch erkannte Beat-Map ist bei Klassik oft ungenau. Im Einmess-Modus tippst du mit der Leertaste mit, und daraus wird die neue Beat-Map. Das funktioniert auch, um die mitgelieferten Stücke nachzubessern.</p>`);
 }
