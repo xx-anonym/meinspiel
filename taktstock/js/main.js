@@ -13,7 +13,10 @@ import { autoKarte } from './autokarte.js';
 const app = document.getElementById('app');
 const klang = new Klang();
 let einst = speicher.einstellungen();
-klang.direktModus = !!einst.direkt; // gilt bis zum Neuladen
+// Safari verträgt Tempoänderungen über MediaElementSource schlecht (Ruckeln,
+// Aussetzer). Dort läuft die Aufnahme standardmäßig direkt.
+const istSafari = /^((?!chrome|chromium|crios|fxios|edg|android).)*safari/i.test(navigator.userAgent);
+klang.direktModus = einst.direkt ?? istSafari; // gilt bis zum Neuladen
 let laufend = null; // aktuelle Vorstellung
 
 const MODI = {
@@ -212,7 +215,7 @@ async function eigenesStueck(id) {
     blob: e.blob,
     kartenJSON: e.karte,
     schwierigkeit: 0,
-    toleranz: 0.13,
+    toleranz: 0.18,
     hinweise: [],
   };
 }
@@ -271,7 +274,7 @@ async function vorstellung(stueck, { frei }) {
     <canvas class="partitur" aria-label="Partitur mit Tempo- und Dynamik-Zielkurve"></canvas>
     <div class="hud">
       <div class="hud-stueck"><b>${h(stueck.titel)}</b><span>${h(stueck.komponist)}${frei ? ' · freies Spiel' : ''}</span></div>
-      <div class="hud-tempo"><span class="tempo-prozent">100 %</span><span class="tempo-bpm">–</span></div>
+      <div class="hud-tempo" title="Dein Tempo im Verhältnis zur Originalaufnahme"><span class="tempo-label">Tempo</span><span class="tempo-prozent">–</span><span class="tempo-bpm">–</span></div>
       <div class="hud-stimmung ${frei ? 'aus' : ''}">
         ${['streicher', 'holz', 'blech'].map((g) => `<div class="stimmung" data-g="${g}"><span>${{ streicher: 'Streicher', holz: 'Holz', blech: 'Blech' }[g]}</span><i><b></b></i></div>`).join('')}
       </div>
@@ -380,7 +383,8 @@ async function vorstellung(stueck, { frei }) {
     });
     l.dirigent = d;
     zeigeHinweis(hinweis, `<p class="auftakt-text">${l.modus === 'geste' ? 'Führe den Taktstock: zwei Schläge geben das Tempo vor.' : l.modus === 'handy' ? 'Zweimal kräftig schlagen – beim dritten Mal setzt das Orchester ein.' : 'Zweimal tippen – beim dritten Schlag setzt das Orchester ein.'}</p>`, 'leise');
-    l.eingabe = new Eingabe(saalEl, {
+    l.eingabe = new Eingabe(app, {
+      bezug: saalEl,
       onSchlag: (t, dynWert, x, y) => {
         d.schlag(t, dynWert);
         partitur.schlag();
@@ -406,6 +410,9 @@ function ereignis(l, art, daten) {
       break;
     case 'einsatz':
       zeigeHinweis(hinweis, '');
+      break;
+    case 'ausklang':
+      zeigeHinweis(hinweis, '<p class="auftakt-text">Weiterschlagen – sonst verstummt das Orchester.</p>', 'leise');
       break;
     case 'verstummt':
       zeigeHinweis(hinweis, '<p class="auftakt-text">Das Orchester wartet. Zwei Schläge, und es geht weiter.</p>', 'leise');
@@ -465,9 +472,10 @@ function schleife(l) {
     if (t - letzteHud > 0.1) {
       letzteHud = t;
       const laeuft = d.zustand === 'laeuft' || d.zustand === 'schluss';
-      hud.prozent.textContent = laeuft ? `${Math.round(d.rate * 100)} %` : '–';
-      hud.prozent.classList.toggle('schnell', laeuft && d.rate > 1.12);
-      hud.prozent.classList.toggle('langsam', laeuft && d.rate < 0.89);
+      const tp = d.tempoProzent;
+      hud.prozent.textContent = laeuft ? `${tp} %` : '–';
+      hud.prozent.classList.toggle('schnell', laeuft && tp > 112);
+      hud.prozent.classList.toggle('langsam', laeuft && tp < 89);
       hud.bpm.textContent = P && laeuft ? `♩ ${Math.round(60 / P)} · Soll ${Math.round(l.karte.bpm(k))}` : `Soll ${Math.round(l.karte.bpm(Math.max(k, l.karte.start)))}`;
       for (const [g, e] of Object.entries(hud.stimmung)) {
         const v = d.stimmung[g];
@@ -630,8 +638,8 @@ function einstellungen() {
       <input type="range" min="0" max="350" step="10" value="${einst.latenz || 0}" id="latenz">
     </label>
     <p class="klein">Mit Bluetooth-Kopfhörern hinkt der Ton 150–250 ms hinterher. Stell hier ein, wie viel, dann folgt das Orchester genauer.</p>
-    <label class="schalter"><input type="checkbox" id="direkt" ${einst.direkt ? 'checked' : ''}> Direktwiedergabe ohne Klangeffekte</label>
-    <p class="klein">Nur falls das Tempo auf deinem Gerät nicht deinem Schlag folgt: Dann läuft die Aufnahme am Web-Audio-Mischpult vorbei. Dynamik, Leiern und Aussetzer fallen weg. Wirkt nach dem Neuladen.</p>
+    <label class="schalter"><input type="checkbox" id="direkt" ${(einst.direkt ?? istSafari) ? 'checked' : ''}> Direktwiedergabe ohne Klangeffekte</label>
+    <p class="klein">Die Aufnahme läuft dann am Web-Audio-Mischpult vorbei: kein Ruckeln bei Tempowechseln, dafür kein Dumpf-Werden und Leiern bei schlechter Stimmung. In Safari ist das von Haus aus an. Wirkt nach dem Neuladen.</p>
     <p class="klein">Eingemessene Beat-Maps der mitgelieferten Stücke liegen in diesem Browser. Zurücksetzen geht im Einmess-Modus des jeweiligen Stücks.</p>`);
   const dk = inhalt.querySelector('#direkt');
   dk.onchange = () => { einst.direkt = dk.checked; speicher.einstellungenSpeichern(einst); };
@@ -735,14 +743,18 @@ class Spur {
   }
 
   zeichne(t) {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const p = this.punkte.filter((q) => t - q.t < 0.7);
+    this.ringe = this.ringe.filter((q) => t - q.t < 0.5);
+    const etwas = p.length > 1 || this.mag > 0.5 || this.ringe.length;
+    if (!etwas && !this.schmutzig) return; // leere Fläche nicht jedes Bild löschen
+    this.schmutzig = etwas;
+    const dpr = Math.min(1.5, window.devicePixelRatio || 1);
     const r = this.cv.getBoundingClientRect();
     const w = Math.round(r.width * dpr), hh = Math.round(r.height * dpr);
     if (this.cv.width !== w || this.cv.height !== hh) { this.cv.width = w; this.cv.height = hh; }
     const g = this.g;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, r.width, r.height);
-    const p = this.punkte.filter((q) => t - q.t < 0.7);
     if (p.length > 1) {
       g.lineCap = 'round';
       g.lineJoin = 'round';
@@ -771,7 +783,6 @@ class Spur {
       g.lineWidth = 3;
       g.beginPath(); g.arc(r.width / 2, r.height * 0.55, 20 + this.mag * 3, 0, Math.PI * 2); g.stroke();
     }
-    this.ringe = this.ringe.filter((q) => t - q.t < 0.5);
     for (const q of this.ringe) {
       const a = (t - q.t) / 0.5;
       g.strokeStyle = `rgba(255,220,150,${0.8 * (1 - a)})`;

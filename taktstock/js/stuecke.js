@@ -16,7 +16,7 @@ export const STUECKE = [
     tutorial: true,
     beschreibung: 'Ruhiger, unerbittlicher Puls. Das Tutorial – bis zum großen Fortissimo, im freien Spiel der ganze Satz.',
     wertungBis: 178.4,
-    toleranz: 0.15,
+    toleranz: 0.2,
     hinweise: [
       { t: 0.3, text: 'Allegretto – ein Trauermarsch, der es nicht eilig hat', art: 'satz' },
       { t: 5, text: 'Bratschen und Celli: leise, gleichmäßig', art: 'witz' },
@@ -40,7 +40,7 @@ export const STUECKE = [
     karte: 'beatmaps/radetzky.json',
     schwierigkeit: 2,
     beschreibung: 'Der Saal klatscht mit – in deinem Tempo, aber mit Verzögerung. Wer abrupt wechselt, verliert das Publikum.',
-    toleranz: 0.13,
+    toleranz: 0.17,
     klatschen: [[4.6, 63.5], [127.5, 148.3]],
     hinweise: [
       { t: 0.3, text: 'Marschtempo. Der Saal sitzt in den Startlöchern.', art: 'satz' },
@@ -63,7 +63,7 @@ export const STUECKE = [
     karte: 'beatmaps/brahms5.json',
     schwierigkeit: 3,
     beschreibung: 'Ständige Tempowechsel. Ein Schlag pro Takt – Stokowski nimmt sich jede Freiheit, du musst mit.',
-    toleranz: 0.14,
+    toleranz: 0.18,
     hinweise: [
       { t: 0.1, text: 'Allegro – ein Schlag pro Takt', art: 'satz' },
       { t: 6, text: 'Rubato: Stokowski hält nichts von Gleichmaß', art: 'witz' },
@@ -84,7 +84,7 @@ export const STUECKE = [
     karte: 'beatmaps/grieg.json',
     schwierigkeit: 4,
     beschreibung: 'Das Finale: Accelerando bis zum Kollaps. Zwei Schläge pro Takt, und jeder wird schneller.',
-    toleranz: 0.13,
+    toleranz: 0.17,
     hinweise: [
       { t: 0.2, text: 'Alla marcia e molto marcato – die Trolle schleichen', art: 'satz' },
       { t: 22, text: 'Pianissimo. Noch merkt keiner was.', art: 'witz' },

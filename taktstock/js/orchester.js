@@ -40,39 +40,73 @@ const zufall = (a, b) => a + Math.random() * (b - a);
 export class Orchester {
   constructor(container) {
     this.container = container;
+    // Ebenen: statischer Saal (Bild), Leuchten der Gruppen (Bilder mit CSS-Deckkraft),
+    // darüber nur die beweglichen Figuren. So muss pro Bild wenig neu gezeichnet werden.
+    this.hg = document.createElement('img');
+    this.hg.className = 'orchester-ebene';
+    this.hg.alt = '';
+    container.appendChild(this.hg);
+    this.glanz = {};
+    for (const g of ['streicher', 'holz', 'blech']) {
+      const i = document.createElement('img');
+      i.className = 'orchester-ebene orchester-glanz';
+      i.alt = '';
+      container.appendChild(i);
+      this.glanz[g] = i;
+    }
     this.svg = el('svg', { class: 'orchester-svg', role: 'img', 'aria-label': 'Das Orchester vom Podium aus' });
     container.appendChild(this.svg);
     this.figuren = [];
-    this.gruppen = {};
-    this.stimmung = { streicher: 0.8, holz: 0.8, blech: 0.8 };
+    this.urls = [];
     this.modus = 'tippen';
+    this.glanzWert = {};
+    this.letztesBild = 0;
     this.#bauen();
     this.ro = new ResizeObserver(() => this.#bauen());
     this.ro.observe(container);
   }
 
-  zerstoeren() { this.ro.disconnect(); this.svg.remove(); }
+  zerstoeren() {
+    this.ro.disconnect();
+    this.urls.forEach((u) => URL.revokeObjectURL(u));
+    this.container.textContent = '';
+  }
+
+  #alsBild(svg, img) {
+    const text = new XMLSerializer().serializeToString(svg);
+    const url = URL.createObjectURL(new Blob([text], { type: 'image/svg+xml' }));
+    this.urls.push(url);
+    img.src = url;
+  }
 
   #bauen() {
     const r = this.container.getBoundingClientRect();
     const A = r.width > 10 && r.height > 10 ? r.width / r.height : 1.8;
     const k = Math.max(0.5, Math.min(1.25, (1060 / A - 140) / 500));
     const hoch = A < 1.2;
-    if (this.layoutKey === `${k.toFixed(2)}|${hoch}`) return;
-    this.layoutKey = `${k.toFixed(2)}|${hoch}`;
+    const schluessel = `${k.toFixed(2)}|${hoch}|${A.toFixed(2)}`;
+    if (this.layoutKey === schluessel) return;
+    this.layoutKey = schluessel;
+    this.urls.forEach((u) => URL.revokeObjectURL(u));
+    this.urls = [];
     this.svg.textContent = '';
     this.figuren = [];
+    this.glanzWert = {};
     const cx = 500, cy = 120 + 500 * k + 40;
     const breite = hoch ? 860 : 1060;
     const x0 = 500 - breite / 2;
     const h = cy + 30;
     // Im Hochformat: oben mehr Saal zeigen statt leerer Fläche
     const yTop = Math.min(0, h - breite / Math.max(0.3, A));
-    this.svg.setAttribute('viewBox', `${x0} ${yTop.toFixed(0)} ${breite} ${(h - yTop).toFixed(0)}`);
+    const viewBox = `${x0} ${yTop.toFixed(0)} ${breite} ${(h - yTop).toFixed(0)}`;
+    const neuesSvg = () => el('svg', { viewBox, preserveAspectRatio: 'xMidYMid meet' });
+    this.svg.setAttribute('viewBox', viewBox);
     this.svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     const figurSkala = hoch ? 1.55 : 1.1;
 
-    const defs = el('defs', {}, this.svg);
+    // ---- Statischer Saal
+    const hg = neuesSvg();
+    const defs = el('defs', {}, hg);
     const lg = el('radialGradient', { id: 'licht', cx: '50%', cy: '55%', r: '60%' }, defs);
     el('stop', { offset: '0%', 'stop-color': '#ffcf86', 'stop-opacity': '0.34' }, lg);
     el('stop', { offset: '55%', 'stop-color': '#c77a2c', 'stop-opacity': '0.12' }, lg);
@@ -89,46 +123,54 @@ export class Orchester {
     el('stop', { offset: '100%', 'stop-color': '#2a170c' }, holzG);
 
     // Rückwand mit Orgelpfeifen
-    el('rect', { x: x0, y: yTop, width: breite, height: h - yTop, fill: '#140c08' }, this.svg);
+    el('rect', { x: x0, y: yTop, width: breite, height: h - yTop, fill: '#140c08' }, hg);
     const wandH = cy - 500 * k - 10;
     const platz = wandH - 30 - yTop; // Höhe über der Brüstung
     const orgel = Math.min(260, Math.max(90, platz * 0.55));
     for (let i = 0; i < 31; i++) {
       const px = 500 + (i - 15) * 17;
       const ph = orgel * (0.55 + 0.4 * Math.cos((i - 15) / 5)) + (i % 2) * 12;
-      el('rect', { x: px - 6, y: wandH - ph - 30, width: 12, height: ph, rx: 5, fill: '#3a2614', opacity: 0.55 }, this.svg);
+      el('rect', { x: px - 6, y: wandH - ph - 30, width: 12, height: ph, rx: 5, fill: '#3a2614', opacity: 0.55 }, hg);
     }
     if (platz > 260) {
       // Ränge mit Logenlampen und Kronleuchter
       for (const [y, n] of [[yTop + platz * 0.18, 9], [yTop + platz * 0.42, 11]]) {
-        el('rect', { x: x0, y, width: breite, height: 8, fill: '#2a1a0f' }, this.svg);
+        el('rect', { x: x0, y, width: breite, height: 8, fill: '#2a1a0f' }, hg);
         for (let i = 0; i < n; i++) {
           const lx = x0 + ((i + 0.5) * breite) / n;
-          el('circle', { cx: lx, cy: y - 10, r: 16, fill: 'url(#lampe)', opacity: 0.55 }, this.svg);
-          el('rect', { x: lx - 16, y: y + 8, width: 32, height: 22, rx: 3, fill: '#1d120b' }, this.svg);
+          el('circle', { cx: lx, cy: y - 10, r: 16, fill: 'url(#lampe)', opacity: 0.55 }, hg);
+          el('rect', { x: lx - 16, y: y + 8, width: 32, height: 22, rx: 3, fill: '#1d120b' }, hg);
         }
       }
       const ky = yTop + platz * 0.08;
-      el('circle', { cx: 500, cy: ky, r: 90, fill: 'url(#glimmen)', opacity: 0.35 }, this.svg);
-      for (let i = -3; i <= 3; i++) el('circle', { cx: 500 + i * 16, cy: ky + Math.abs(i) * -4 + 8, r: 5, fill: '#ffe2a8', opacity: 0.9 }, this.svg);
+      el('circle', { cx: 500, cy: ky, r: 90, fill: 'url(#glimmen)', opacity: 0.35 }, hg);
+      for (let i = -3; i <= 3; i++) el('circle', { cx: 500 + i * 16, cy: ky + Math.abs(i) * -4 + 8, r: 5, fill: '#ffe2a8', opacity: 0.9 }, hg);
     }
-    el('rect', { x: x0, y: wandH - 30, width: breite, height: 30, fill: '#24160d' }, this.svg);
-    el('ellipse', { cx: 500, cy: cy - 260 * k, rx: 640, ry: 420 * k + 120, fill: 'url(#licht)' }, this.svg);
-
+    el('rect', { x: x0, y: wandH - 30, width: breite, height: 30, fill: '#24160d' }, hg);
+    el('ellipse', { cx: 500, cy: cy - 260 * k, rx: 640, ry: 420 * k + 120, fill: 'url(#licht)' }, hg);
     // Podeste (Stufen)
     for (const rr of [540, 465, 390, 315, 240]) {
-      el('ellipse', { cx, cy, rx: rr, ry: rr * k, fill: 'url(#podest)', stroke: '#7a4c28', 'stroke-width': 1.5, opacity: 0.92 }, this.svg);
+      el('ellipse', { cx, cy, rx: rr, ry: rr * k, fill: 'url(#podest)', stroke: '#7a4c28', 'stroke-width': 1.5, opacity: 0.92 }, hg);
     }
-    el('ellipse', { cx, cy, rx: 165, ry: 165 * k, fill: '#1c110a', stroke: '#6b4223', 'stroke-width': 1.5 }, this.svg);
+    el('ellipse', { cx, cy, rx: 165, ry: 165 * k, fill: '#1c110a', stroke: '#6b4223', 'stroke-width': 1.5 }, hg);
+    this.#alsBild(hg, this.hg);
 
-    // Leuchten der Gruppen
-    this.gruppenGlanz = {
-      streicher: [el('ellipse', { cx: 300, cy: cy - 260 * k, rx: 230, ry: 120 * k + 30, fill: 'url(#glimmen)', opacity: 0 }, this.svg),
-        el('ellipse', { cx: 700, cy: cy - 260 * k, rx: 230, ry: 120 * k + 30, fill: 'url(#glimmen)', opacity: 0 }, this.svg)],
-      holz: [el('ellipse', { cx: 500, cy: cy - 385 * k, rx: 130, ry: 70 * k + 20, fill: 'url(#glimmen)', opacity: 0 }, this.svg)],
-      blech: [el('ellipse', { cx: 190, cy: cy - 330 * k, rx: 120, ry: 80 * k + 20, fill: 'url(#glimmen)', opacity: 0 }, this.svg),
-        el('ellipse', { cx: 760, cy: cy - 420 * k, rx: 170, ry: 80 * k + 20, fill: 'url(#glimmen)', opacity: 0 }, this.svg)],
+    // ---- Leuchten der Gruppen, je eine Ebene
+    const glanzFlaechen = {
+      streicher: [[300, cy - 260 * k, 230, 120 * k + 30], [700, cy - 260 * k, 230, 120 * k + 30]],
+      holz: [[500, cy - 385 * k, 130, 70 * k + 20]],
+      blech: [[190, cy - 330 * k, 120, 80 * k + 20], [760, cy - 420 * k, 170, 80 * k + 20]],
     };
+    for (const [g, flaechen] of Object.entries(glanzFlaechen)) {
+      const gs = neuesSvg();
+      const d = el('defs', {}, gs);
+      const gl = el('radialGradient', { id: 'g' }, d);
+      el('stop', { offset: '0%', 'stop-color': '#ffd88f', 'stop-opacity': '0.85' }, gl);
+      el('stop', { offset: '100%', 'stop-color': '#ffb347', 'stop-opacity': '0' }, gl);
+      for (const [ex, ey, rx, ry] of flaechen) el('ellipse', { cx: ex, cy: ey, rx, ry, fill: 'url(#g)' }, gs);
+      this.#alsBild(gs, this.glanz[g]);
+      this.glanz[g].style.opacity = '0';
+    }
 
     // Sitze von hinten nach vorn
     const sitze = [];
@@ -140,7 +182,6 @@ export class Orchester {
       }
     }
     sitze.sort((p, q) => p.y - q.y);
-    this.gruppen = { streicher: el('g', {}, null), holz: el('g', {}, null), blech: el('g', {}, null) };
     const ebene = el('g', {}, this.svg);
     for (const s of sitze) {
       const tiefe = 1.12 - ((s.rad - 200) / 300) * 0.38;
@@ -173,7 +214,8 @@ export class Orchester {
     const pult = el('g', {}, null);
     if (s.art !== 'pauke') {
       el('path', { d: 'M -10 8 L 10 8 L 8 -2 L -8 -2 Z', fill: '#0d0907', opacity: 0.92 }, pult);
-      el('circle', { cx: 0, cy: -3, r: 6, fill: 'url(#lampe)', opacity: 0.7 }, pult);
+      el('circle', { cx: 0, cy: -3, r: 5.5, fill: '#ffcf7a', opacity: 0.22 }, pult);
+      el('circle', { cx: 0, cy: -3, r: 2, fill: '#fff1c7', opacity: 0.9 }, pult);
     }
     // Rumpf
     el('path', { d: steht ? 'M -15 0 Q -17 -36 0 -40 Q 17 -36 15 0 Z' : 'M -14 0 Q -16 -27 0 -29 Q 16 -27 14 0 Z', fill: kleid }, koerper);
@@ -266,6 +308,9 @@ export class Orchester {
 
   // Jedes Bild: Position im Stück, Stimmung, Lautstärke
   zeichne(phi, { zustand, stimmung, laut = 0.5, frei = false }) {
+    const jetzt = performance.now();
+    if (jetzt - this.letztesBild < 30) return; // 30 Bilder pro Sekunde reichen
+    this.letztesBild = jetzt;
     const f = phi - Math.floor(phi);
     const k = Math.floor(phi);
     const spielt = zustand === 'laeuft' || zustand === 'schluss' || zustand === 'ausklang';
@@ -295,10 +340,10 @@ export class Orchester {
       }
       if (fig.extra && spielt) fig.extra.setAttribute('y2', (fig.hy + 30 + Math.max(0, bogenW) * 0.8).toFixed(1));
     }
-    for (const [gruppe, ellipsen] of Object.entries(this.gruppenGlanz || {})) {
+    for (const [gruppe, bild] of Object.entries(this.glanz)) {
       const st = stimmung ? stimmung[gruppe] : 0.8;
-      const o = frei ? 0.45 : Math.max(0, (st - 0.45) / 0.55) * (spielt ? 0.85 : 0.4);
-      for (const e of ellipsen) e.setAttribute('opacity', o.toFixed(3));
+      const o = Math.round((frei ? 0.45 : Math.max(0, (st - 0.45) / 0.55) * (spielt ? 0.85 : 0.4)) * 20) / 20;
+      if (this.glanzWert[gruppe] !== o) { this.glanzWert[gruppe] = o; bild.style.opacity = String(o); }
     }
     // Taktstock im Tipp-Modus
     if (this.stockLinie) {

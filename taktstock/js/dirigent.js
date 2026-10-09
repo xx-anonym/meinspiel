@@ -107,13 +107,13 @@ export class Dirigent {
     this.zustand = 'bereit';
     this.phi = karte.start - 1;
     this.rate = 1;
-    this.rateZiel = 1;
-    this.korr = { faktor: 1, bis: 0 };
+    this.faktor = 1; // Phasenkorrektur, höchstens ±8 %
+    this.phase = 0;
+    this.anzeige = null; // dein Tempo im Verhältnis zum Original, geglättet
     this.letzterSchlagT = -Infinity;
     this.letzterK = karte.start - 1;
     this.letzteKreuzT = null;
-    this.uhr = { ct: 0, t: 0, rate: 1 };
-    this.letzteRateSetzung = 0;
+    this.uhr = { roh: 0, basis: 0, t0: 0, rate: 1 };
     this.dyn = 0.5;
     this.unruhe = 0;
     this.endePhi = (wertung ? karte.ende : karte.anzahl - 1) + 0.02;
@@ -133,7 +133,7 @@ export class Dirigent {
   }
 
   get periode() { return this.taktgeber.periode; }
-  get tempoProzent() { return Math.round(this.rate * 100); }
+  get tempoProzent() { return Math.round((this.anzeige ?? this.rate) * 100); }
 
   latenz() { return this.klang.latenz() + this.latenzExtra; }
 
@@ -141,9 +141,31 @@ export class Dirigent {
   #audioZeit(t) {
     const a = this.audio;
     const ct = a.currentTime;
-    if (a.paused) { this.uhr = { ct, t, rate: a.playbackRate }; return ct; }
-    if (ct !== this.uhr.ct) { this.uhr = { ct, t, rate: a.playbackRate }; return ct; }
-    return ct + Math.min(0.25, t - this.uhr.t) * this.uhr.rate;
+    if (a.paused || ct !== this.uhr.roh) { this.uhr = { roh: ct, basis: ct, t0: t, rate: a.playbackRate }; return ct; }
+    return this.uhr.basis + Math.min(0.25, t - this.uhr.t0) * this.uhr.rate;
+  }
+
+  // Die Wiedergabegeschwindigkeit ändert sich selten und nur in Stufen:
+  // jede Änderung kann im Browser hörbar ruckeln.
+  #rateSetzen(r, t, immer = false) {
+    if (!Number.isFinite(r)) return;
+    r = klemme(r, RATE_MIN, RATE_MAX);
+    if (!immer && Math.abs(r - this.rate) / this.rate < 0.015) return;
+    const jetzt = this.#audioZeit(t);
+    this.rate = r;
+    try { this.audio.playbackRate = r; } catch { /* ignorieren */ }
+    this.uhr = { roh: this.audio.currentTime, basis: jetzt, t0: t, rate: r };
+  }
+
+  #rateAusTempo(t, immer = false) {
+    const P = this.taktgeber.periode;
+    if (!P) return;
+    const k = this.karte.idx(Math.max(this.karte.start, Math.floor(this.phi)));
+    if (this.karte.istFermate(k)) {
+      this.#rateSetzen(this.fermateEilt ? RATE_MAX : 1, t, immer);
+      return;
+    }
+    this.#rateSetzen((this.karte.periode[k] / P) * this.faktor, t, immer);
   }
 
   // ---------- Eingabe ----------
@@ -193,11 +215,13 @@ export class Dirigent {
     this.startK = k;
     this.letzteKreuzT = null;
     this.fenster = [];
-    this.rate = this.rateZiel = r0;
-    this.korr = { faktor: 1, bis: 0 };
+    this.rate = r0;
+    this.faktor = 1;
+    this.phase = 0;
+    this.anzeige = D / P;
     a.playbackRate = r0;
     a.currentTime = pos;
-    this.uhr = { ct: pos, t, rate: r0 };
+    this.uhr = { roh: pos, basis: pos, t0: t, rate: r0 };
     this.klang.blende(1, 0.05);
     this.zustand = 'laeuft';
     if (this.stat.start == null) this.stat.start = t;
@@ -219,6 +243,7 @@ export class Dirigent {
       this.taktgeber.pause();
       this.taktgeber.schlag(t);
       this.fermateEilt = true;
+      this.#rateSetzen(RATE_MAX, t, true);
       if (!this.fermateLos) {
         this.fermateLos = true;
         if (phiH - f < 0.8) {
@@ -241,7 +266,11 @@ export class Dirigent {
     const P = this.taktgeber.periode;
     const ziel = Math.round(phiH);
     const err = ziel - phiH; // > 0: Orchester hinkt hinterher
-    this.korr = { faktor: klemme(1 + 0.6 * err, 0.65, 1.45), bis: t + 0.75 * P };
+    this.phase = this.phase * 0.4 + err * 0.6;
+    this.faktor = 1 + klemme(0.4 * this.phase, -0.08, 0.08);
+    const D = kt.periode[kt.idx(ziel)];
+    this.anzeige = this.anzeige == null ? D / P : this.anzeige * 0.6 + (D / P) * 0.4;
+    this.#rateAusTempo(t);
     // Unruhe: Intervallsprung, der nicht in der Musik steht
     if (r.status === 'ok' && r.vorher) {
       const soll = Math.log(kt.periode[kt.idx(ziel)] / kt.periode[kt.idx(ziel - 1)]);
@@ -254,8 +283,10 @@ export class Dirigent {
   #ausklang(t) {
     this.zustand = 'ausklang';
     this.ausklangT = t;
+    this.ausklangStufe = t;
     this.stat.stillstaende++;
     this.klang.blende(0, 1.6);
+    this.melde('ausklang');
   }
 
   #weiterNachAusklang(t) {
@@ -263,6 +294,7 @@ export class Dirigent {
     this.klang.blende(1, 0.15);
     this.taktgeber.pause();
     this.taktgeber.schlag(t);
+    this.#rateAusTempo(t, true);
   }
 
   #loslassen(t) {
@@ -273,7 +305,7 @@ export class Dirigent {
     this.letzterSchlagT = t;
     this.taktgeber.pause();
     this.taktgeber.schlag(t);
-    this.korr = { faktor: 1, bis: 0 };
+    this.faktor = 1;
     this.klang.blende(1, 0.06);
     const p = this.audio.play();
     if (p && p.catch) p.catch(() => {});
@@ -283,15 +315,14 @@ export class Dirigent {
   // ---------- Takt ----------
 
   tick(t) {
-    const dt = klemme(t - (this.letzterTick ?? t), 0, 0.1);
-    this.letzterTick = t;
     const a = this.audio, kt = this.karte;
     const tA = this.#audioZeit(t);
     if (this.zustand !== 'bereit') this.phi = kt.pos(tA);
 
     if (this.zustand === 'laeuft') {
       const k = Math.floor(this.phi);
-      while (this.letzterK < k) { this.letzterK++; this.#kreuzung(this.letzterK, t); }
+      let neuerSchlag = false;
+      while (this.letzterK < k) { this.letzterK++; this.#kreuzung(this.letzterK, t); neuerSchlag = true; }
       if (this.phi >= this.endePhi) {
         this.#schluss(t);
       } else {
@@ -301,6 +332,7 @@ export class Dirigent {
           this.fermateOffen = k;
           this.fermateLos = false;
           this.fermateEilt = false;
+          this.#rateSetzen(1, t, true);
         }
         const seit = t - this.letzterSchlagT;
         const grenze = Math.max(STILLE_AB, 2.1 * P) + (inFermate ? kt.dauern[kt.idx(k)] / Math.max(this.rate, 0.5) : 0);
@@ -312,14 +344,20 @@ export class Dirigent {
           this.melde('halt');
         } else if (seit > grenze) {
           this.#ausklang(t);
-        } else {
-          let r = inFermate ? (this.fermateEilt ? RATE_MAX : 1) : kt.periode[kt.idx(k)] / P;
-          if (t < this.korr.bis) r *= this.korr.faktor;
-          if (Number.isFinite(r)) this.rateZiel = klemme(r, RATE_MIN, RATE_MAX);
+        } else if (neuerSchlag) {
+          // Pro Schlag: Originaltempo kann sich ändern, Phasenkorrektur klingt ab
+          this.faktor = 1 + (this.faktor - 1) * 0.6;
+          this.#rateAusTempo(t);
+          this.stat.maxRate = Math.max(this.stat.maxRate, this.rate);
+          this.stat.minRate = Math.min(this.stat.minRate, this.rate);
         }
       }
     } else if (this.zustand === 'ausklang') {
-      this.rateZiel = Math.max(RATE_MIN, this.rate * (1 - dt * 0.9));
+      // Orchester wird in Stufen langsamer
+      if (t - (this.ausklangStufe || 0) > 0.35 && this.rate > RATE_MIN) {
+        this.ausklangStufe = t;
+        this.#rateSetzen(this.rate * 0.86, t, true);
+      }
       const k = Math.floor(this.phi);
       while (this.letzterK < k) { this.letzterK++; this.#kreuzung(this.letzterK, t); }
       if (t - this.ausklangT > 1.7) {
@@ -330,23 +368,10 @@ export class Dirigent {
         this.melde('verstummt');
       }
     } else if (this.zustand === 'schluss') {
-      this.rateZiel = 1;
       if (a.ended || t > this.schlussBis) this.#beenden();
     }
 
-    if (this.zustand === 'laeuft' || this.zustand === 'ausklang' || this.zustand === 'schluss') {
-      this.rate += (this.rateZiel - this.rate) * (1 - Math.exp(-dt / 0.09));
-      if (Math.abs(this.rate - a.playbackRate) > 0.005 && t - this.letzteRateSetzung > 0.045) {
-        try { a.playbackRate = this.rate; } catch { /* ignorieren */ }
-        this.letzteRateSetzung = t;
-        this.uhr = { ct: a.currentTime, t, rate: this.rate };
-      }
-      if (this.zustand === 'laeuft') {
-        this.stat.maxRate = Math.max(this.stat.maxRate, this.rate);
-        this.stat.minRate = Math.min(this.stat.minRate, this.rate);
-      }
-      this.#dynamikAnwenden();
-    }
+    if (this.zustand === 'laeuft' || this.zustand === 'ausklang' || this.zustand === 'schluss') this.#dynamikAnwenden();
     if (this.mitklatschen) this.mitklatschen.tick(t);
   }
 
@@ -365,6 +390,7 @@ export class Dirigent {
       this.klang.blende(0, 3.2);
       this.schlussBis = t + 3.3;
     } else {
+      this.#rateSetzen(1, t, true); // Schlussakkord klingt im Originaltempo aus
       const rest = Math.max(0, (this.audio.duration || kt.beats[letzter] + 4) - this.audio.currentTime);
       this.schlussBis = t + Math.min(8, rest + 0.3);
     }
@@ -412,7 +438,7 @@ export class Dirigent {
     // Die ersten Schläge nach dem Einsatz sind Anlauf und zählen nicht
     if (!this.wertung || k <= this.startK + 2) return;
 
-    const tol = this.stueck.toleranz ?? 0.12;
+    const tol = this.stueck.toleranz ?? 0.18;
     let p = Math.exp(-Math.pow(Math.abs(tempo) / tol, 2));
     if (this.dynamikAktiv) p *= 0.72 + 0.28 * Math.exp(-Math.pow(dynAbw / 0.25, 2));
     p *= 1 - Math.min(0.35, this.unruhe * 0.45);

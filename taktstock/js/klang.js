@@ -51,7 +51,16 @@ export class Klang {
   // Tempo über MediaElementSource nicht folgt). Keine Effekte, Blende über volume.
   direkt(audio) {
     this.direktEl = audio;
-    try { audio.volume = 0; } catch { /* iOS ignoriert volume */ }
+    this.direktPegel = 0;
+    this.direktDyn = 1;
+    this.#direktAnwenden();
+  }
+
+  // Lautstärke im Direktbetrieb: Blende × Dynamik, mit Luft nach oben
+  #direktAnwenden() {
+    const el = this.direktEl;
+    if (!el) return;
+    try { el.volume = Math.max(0, Math.min(1, 0.75 * this.direktPegel * this.direktDyn)); } catch { /* iOS ignoriert volume */ }
   }
 
   // Ausgabeverzögerung in Sekunden, so gut der Browser sie kennt
@@ -119,17 +128,23 @@ export class Klang {
   }
 
   dynamik(gainLinear) {
+    if (this.direktEl && !this.quelle) {
+      this.direktDyn += (gainLinear - this.direktDyn) * 0.15;
+      this.#direktAnwenden();
+      return;
+    }
     if (!this.ctx) return;
     this.dyn.gain.setTargetAtTime(gainLinear, this.ctx.currentTime, 0.12);
   }
 
   blende(ziel, sekunden = 0.08) {
     if (this.direktEl && !this.quelle) {
-      const el = this.direktEl, von = el.volume, t0 = performance.now(), dauer = Math.max(10, sekunden * 1000);
+      const von = this.direktPegel, t0 = performance.now(), dauer = Math.max(10, sekunden * 1000);
       clearInterval(this.blendTimer);
       this.blendTimer = setInterval(() => {
         const f = Math.min(1, (performance.now() - t0) / dauer);
-        try { el.volume = von + (ziel - von) * f; } catch { /* egal */ }
+        this.direktPegel = von + (ziel - von) * f;
+        this.#direktAnwenden();
         if (f >= 1) clearInterval(this.blendTimer);
       }, 20);
       return;
@@ -154,6 +169,13 @@ export class Klang {
   }
 
   aussetzer(dauer = 0.12) {
+    if (this.direktEl && !this.quelle) {
+      const pegel = this.direktPegel;
+      this.direktPegel = pegel * 0.05;
+      this.#direktAnwenden();
+      setTimeout(() => { this.direktPegel = Math.max(this.direktPegel, pegel); this.#direktAnwenden(); }, dauer * 1000);
+      return;
+    }
     if (!this.ctx) return;
     const g = this.aussetzerGain.gain, t = this.ctx.currentTime;
     g.cancelScheduledValues(t);
@@ -164,6 +186,7 @@ export class Klang {
   }
 
   effekteZuruecksetzen() {
+    if (this.direktEl && !this.quelle) { this.direktDyn = 1; this.#direktAnwenden(); }
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     this.tiefpass.frequency.setTargetAtTime(18000, t, 0.05);

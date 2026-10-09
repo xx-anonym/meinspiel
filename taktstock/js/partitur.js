@@ -35,7 +35,7 @@ export class Partitur {
   schlag() { this.puls = 1; }
 
   #groesse() {
-    const dpr = Math.min(2.5, window.devicePixelRatio || 1);
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
     const r = this.cv.getBoundingClientRect();
     const w = Math.max(10, Math.round(r.width * dpr)), h = Math.max(10, Math.round(r.height * dpr));
     if (this.cv.width !== w || this.cv.height !== h) { this.cv.width = w; this.cv.height = h; }

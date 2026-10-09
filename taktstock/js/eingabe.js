@@ -4,9 +4,18 @@
 
 const sek = (ms) => ms / 1000;
 
+// Zeitstempel eines Ereignisses auf der performance.now()-Uhr. Manche Browser
+// liefern andere Bezugspunkte; dann gilt die Zeit der Verarbeitung.
+function zeit(e) {
+  const jetzt = performance.now();
+  const ts = e && e.timeStamp;
+  return sek(ts > 0 && Math.abs(jetzt - ts) < 1000 ? ts : jetzt);
+}
+
 export class Eingabe {
-  constructor(flaeche, { onSchlag, onSpur = () => {}, onTaste = () => {} }) {
+  constructor(flaeche, { onSchlag, onSpur = () => {}, onTaste = () => {}, bezug = flaeche }) {
     this.flaeche = flaeche;
+    this.bezug = bezug; // Koordinaten relativ zu diesem Element
     this.onSchlag = onSchlag;
     this.onSpur = onSpur;
     this.onTaste = onTaste;
@@ -78,7 +87,7 @@ export class Eingabe {
       const tag = (e.target && e.target.tagName) || '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       e.preventDefault();
-      this.#schlag(sek(e.timeStamp || performance.now()));
+      this.#schlag(zeit(e));
       return;
     }
     this.onTaste(e);
@@ -92,15 +101,15 @@ export class Eingabe {
     if (this.#istKnopf(e)) return;
     if (this.modus === 'tippen' || this.modus === 'handy') {
       e.preventDefault();
-      const r = this.flaeche.getBoundingClientRect();
-      this.#schlag(sek(e.timeStamp || performance.now()), null, e.clientX - r.left, e.clientY - r.top);
+      const r = this.bezug.getBoundingClientRect();
+      this.#schlag(zeit(e), null, e.clientX - r.left, e.clientY - r.top);
       return;
     }
     if (this.modus === 'geste') {
       e.preventDefault();
       try { this.flaeche.setPointerCapture(e.pointerId); } catch { /* egal */ }
       this.geste = null;
-      this.#punkt(e.clientX, e.clientY, sek(e.timeStamp || performance.now()));
+      this.#punkt(e.clientX, e.clientY, zeit(e));
     }
   }
 
@@ -111,12 +120,12 @@ export class Eingabe {
   // Maus dirigiert auch ohne gedrückte Taste, Finger nur bei Berührung
   #bewegt(e) {
     const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-    for (const ev of (events.length ? events : [e])) this.#punkt(ev.clientX, ev.clientY, sek(ev.timeStamp || e.timeStamp || performance.now()));
+    for (const ev of (events.length ? events : [e])) this.#punkt(ev.clientX, ev.clientY, zeit(ev.timeStamp > 0 ? ev : e));
   }
 
   // Gestenerkennung: tiefster Punkt einer Ab-auf-Bewegung ist ein Schlag.
   #punkt(cx, cy, t) {
-    const r = this.flaeche.getBoundingClientRect();
+    const r = this.bezug.getBoundingClientRect();
     const x = cx - r.left, y = cy - r.top;
     const H = Math.max(200, r.height);
     this.spur.push({ x, y, t });
@@ -148,7 +157,7 @@ export class Eingabe {
 
   // Handy als Taktstock: Beschleunigungsspitzen sind Schläge.
   #motion(e) {
-    const t = sek(e.timeStamp || performance.now());
+    const t = zeit(e);
     let ax, ay, az;
     if (e.acceleration && e.acceleration.x != null) {
       ({ x: ax, y: ay, z: az } = e.acceleration);
