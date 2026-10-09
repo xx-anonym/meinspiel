@@ -15,10 +15,19 @@
 <header class="kopf">
   <a class="marke" href="./" aria-label="ANNO – zur Startseite">ANNO</a>
   <div class="stand" id="stand" aria-live="polite"></div>
+  <div class="schalter">
+    <button type="button" class="schalt" id="musik-knopf" aria-pressed="true" aria-label="Musik" title="Musik an/aus (Taste M)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17.5V6l10-2.2v11.7"/><ellipse cx="6.6" cy="17.6" rx="2.6" ry="2.1" class="voll"/><ellipse cx="16.6" cy="15.6" rx="2.6" ry="2.1" class="voll"/><path class="aus" d="M3.5 3.5l17 17"/></svg>
+    </button>
+    <button type="button" class="schalt" id="klang-knopf" aria-pressed="true" aria-label="Klänge" title="Klänge an/aus">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.8 9.4h3.6L12 5.6v12.8l-4.6-3.8H3.8z" class="voll"/><path class="an" d="M15.4 9.2a4 4 0 0 1 0 5.6M17.9 6.6a7.6 7.6 0 0 1 0 10.8"/><path class="aus" d="M15.6 9.6l4.8 4.8M20.4 9.6l-4.8 4.8"/></svg>
+    </button>
+  </div>
 </header>
 <main id="app" tabindex="-1"></main>
 <div id="meldung" class="meldung" role="status" hidden></div>
 <noscript><p class="hinweis">ANNO braucht JavaScript.</p></noscript>
+<script src="klang.js" defer></script>
 <script src="app.js" defer></script>
 </body>
 </html>

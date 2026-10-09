@@ -68,7 +68,7 @@ def zeichen_im_projekt(wurzel):
     z = set(BASIS)
     pfade = [os.path.join(wurzel, 'data', 'passages.json')]
     pfade += glob.glob(os.path.join(wurzel, 'data', 'passages', '*.json'))
-    pfade += [os.path.join(wurzel, f) for f in ('index.html', 'app.js')]
+    pfade += [os.path.join(wurzel, f) for f in ('index.html', 'app.js', 'klang.js')]
     for p in pfade:
         with open(p, encoding='utf-8') as f:
             z |= set(f.read())

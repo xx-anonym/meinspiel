@@ -47,6 +47,24 @@ Die Metadaten (Autor, Titel, Erscheinungsjahr, Gattung) stammen aus den
 (Hauptkategorie `dwds1main`: Belletristik, Gebrauchsliteratur,
 Wissenschaft; Untergattung `dtasub`).
 
+## Musik
+
+| Datei | Stück | Aufnahme | Lizenz |
+| --- | --- | --- | --- |
+| `musik/goldberg-aria.mp3` | J. S. Bach, Goldberg-Variationen BWV 988: Aria | Kimiko Ishizaka, *The Open Goldberg Variations* (2012) | CC0 1.0 |
+| `musik/goldberg-var13.mp3` | Variatio 13 a 2 Clav. | ebenda | CC0 1.0 |
+| `musik/goldberg-var21.mp3` | Variatio 21, Canone alla Settima | ebenda | CC0 1.0 |
+| `musik/goldberg-var25.mp3` | Variatio 25 a 2 Clav. | ebenda | CC0 1.0 |
+
+Quelle: <https://archive.org/details/OpenGoldbergVariations> (Lizenzangabe
+<http://creativecommons.org/publicdomain/zero/1.0/>), Projektseite
+<https://www.opengoldbergvariations.org/>. Die Aufnahmen wurden für ANNO mit
+ffmpeg auf mono heruntergemischt, leicht komprimiert, auf etwa −23 LUFS
+normalisiert, mit kurzen Ein- und Ausblendungen versehen und als MP3 (VBR)
+neu kodiert. CC0 verlangt keine Namensnennung; sie steht hier trotzdem.
+
+Alle übrigen Klänge erzeugt `klang.js` zur Laufzeit; sie haben keine Quelle.
+
 ## Schriften
 
 Beide Schriften liegen in `fonts/` als Untermengen im Format WOFF2 (erzeugt

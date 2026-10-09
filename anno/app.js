@@ -62,6 +62,27 @@ const ruhig = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const punkteFuerJahr = (abstand) => Math.round(MAX_JAHR * Math.exp(-abstand / ABFALL));
 
+// Urteil über eine Runde (nur nach dem Jahr) und über ein ganzes Spiel
+const URTEILE = [
+  [0, 'Aufs Jahr genau', 'gut'],
+  [3, 'Volltreffer', 'gut'],
+  [10, 'Sehr nah', 'gut'],
+  [25, 'Gut geschätzt', 'mittel'],
+  [50, 'Ordentlich', 'mittel'],
+  [100, 'Daneben', 'schwach'],
+  [Infinity, 'Weit daneben', 'schwach'],
+];
+const urteil = (abstand) => URTEILE.find(([bis]) => abstand <= bis);
+const RAENGE = [
+  [0.88, 'Meisterhaft', 'gut'],
+  [0.7, 'Sehr belesen', 'gut'],
+  [0.5, 'Belesen', 'mittel'],
+  [0.32, 'Solide', 'mittel'],
+  [0.15, 'Lehrjahre', 'schwach'],
+  [0, 'Erste Seiten', 'schwach'],
+];
+const rang = (anteil) => RAENGE.find(([ab]) => anteil >= ab);
+
 function jahreText(d) {
   if (d === 0) return 'aufs Jahr genau';
   return d === 1 ? '1 Jahr daneben' : `${d} Jahre daneben`;
@@ -101,15 +122,59 @@ function neuerSeed() {
   return z[0].toString(36) + z[1].toString(36);
 }
 
-function hochzaehlen(el, ziel, dauer = 1200) {
-  if (ruhig()) { el.textContent = zahl(ziel); return; }
+// Zählt eine Zahl hoch; mit ton tickt es dabei leise, mit steigender Tonhöhe.
+function hochzaehlen(el, ziel, dauer = 1200, { von = 0, ton = false } = {}) {
+  if (ruhig() || ziel === von) { el.textContent = zahl(ziel); return; }
   const start = performance.now();
+  const stufen = Math.min(16, Math.max(4, Math.round(dauer / 90)));
+  let stufe = -1;
   const schritt = (jetzt) => {
+    if (!el.isConnected) return;
     const t = Math.min(1, (jetzt - start) / dauer);
-    el.textContent = zahl(Math.round(ziel * (1 - Math.pow(1 - t, 3))));
+    const k = 1 - Math.pow(1 - t, 3);
+    el.textContent = zahl(Math.round(von + (ziel - von) * k));
+    const s = Math.floor(k * stufen);
+    if (ton && s !== stufe && t < 1) { stufe = s; Klang.zaehlen(k); }
     if (t < 1) requestAnimationFrame(schritt);
   };
   requestAnimationFrame(schritt);
+}
+
+// Geplante Schritte einer Animation; ein Seitenwechsel bricht sie ab.
+let plan = [];
+function spaeter(fn, ms) {
+  plan.push(setTimeout(fn, ms));
+}
+function planLeeren() {
+  plan.forEach(clearTimeout);
+  plan = [];
+}
+
+// Tinte: die Wörter eines Textes erscheinen nacheinander
+function tinte(wurzel, auswahl = () => true, gesamt = 900) {
+  if (ruhig() || !wurzel) return;
+  const knoten = [];
+  const gang = document.createTreeWalker(wurzel, NodeFilter.SHOW_TEXT);
+  while (gang.nextNode()) {
+    if (gang.currentNode.nodeValue.trim() && auswahl(gang.currentNode)) knoten.push(gang.currentNode);
+  }
+  const teile = knoten.map((n) => n.nodeValue.split(/(\s+)/));
+  const woerter = teile.reduce((s, t) => s + t.filter((x) => x && !/^\s+$/.test(x)).length, 0);
+  const takt = Math.min(16, gesamt / Math.max(1, woerter));
+  let i = 0;
+  knoten.forEach((n, k) => {
+    const frag = document.createDocumentFragment();
+    for (const teil of teile[k]) {
+      if (!teil) continue;
+      if (/^\s+$/.test(teil)) { frag.append(teil); continue; }
+      const w = document.createElement('span');
+      w.className = 'w';
+      w.style.animationDelay = `${Math.round(i++ * takt)}ms`;
+      w.textContent = teil;
+      frag.append(w);
+    }
+    n.replaceWith(frag);
+  });
 }
 
 let meldungZeit = null;
@@ -117,8 +182,15 @@ function meldung(text) {
   const el = $('#meldung');
   el.textContent = text;
   el.hidden = false;
+  el.classList.remove('weg');
+  el.classList.remove('da');
+  el.getBoundingClientRect();
+  el.classList.add('da');
   clearTimeout(meldungZeit);
-  meldungZeit = setTimeout(() => { el.hidden = true; }, 2600);
+  meldungZeit = setTimeout(() => {
+    el.classList.add('weg');
+    meldungZeit = setTimeout(() => { el.hidden = true; }, ruhig() ? 0 : 260);
+  }, 2600);
 }
 
 // localStorage kann fehlen oder voll sein; das Spiel läuft dann ohne Speicher.
@@ -419,10 +491,11 @@ function striche(von, bis) {
   let s = '';
   for (let j = von; j <= bis; j += schritt) {
     const art = j % 100 === 0 ? 'j100' : j % 50 === 0 ? 'j50' : j % 10 === 0 ? 'j10' : 'j5';
-    s += `<span class="zl-strich ${art}" style="left:${anteil(j)}%"></span>`;
+    const pos = `left:${anteil(j)}%;--p:${(anteil(j) / 100).toFixed(3)}`;
+    s += `<span class="zl-strich ${art}" style="${pos}"></span>`;
     if (j % beschriftung === 0) {
       const leise = beschriftung === 10 && j % 20 !== 0 && j % 50 !== 0 ? ' leise' : '';
-      s += `<span class="zl-zahl ${art}${leise}" style="left:${anteil(j)}%">${j}</span>`;
+      s += `<span class="zl-zahl ${art}${leise}" style="${pos}">${j}</span>`;
     }
   }
   return s;
@@ -449,6 +522,7 @@ class Zeitleiste {
     el.innerHTML = `
       <div class="zl-flaeche">
         <span class="zl-spur"></span>
+        <span class="zl-welle" hidden></span>
         ${striche(von, bis)}
         <span class="zl-strecke" hidden></span>
         <span class="zl-schatten" hidden><span></span></span>
@@ -526,7 +600,18 @@ class Zeitleiste {
   setzen(jahr) {
     if (this.gesperrt) return;
     jahr = klemmen(Math.round(jahr), this.von, this.bis);
+    const alt = this.jahr;
     this.jahr = jahr;
+    if (alt === null) {
+      Klang.pin();
+      Klang.vibrieren(8);
+      this.tippPin.classList.add('faellt');
+    } else if (alt !== jahr) {
+      // beim Ziehen tickt jedes überquerte Jahrzehnt, sonst jeder Schritt
+      const jz = (j) => Math.floor(j / 10);
+      if (!this.ziehen) Klang.tick(jahr % 100 === 0);
+      else if (jz(alt) !== jz(jahr)) Klang.tick(Math.floor(alt / 100) !== Math.floor(jahr / 100));
+    }
     this.tippPin.hidden = false;
     this.tippPin.style.left = `${this.anteil(jahr)}%`;
     $('.zl-fahne', this.tippPin).textContent = jahr;
@@ -562,7 +647,13 @@ class Zeitleiste {
     strecke.classList.add('laeuft');
     strecke.style.left = `${this.anteil(Math.min(tipp, l))}%`;
     strecke.style.width = `${Math.abs(this.anteil(l) - this.anteil(tipp))}%`;
-    setTimeout(() => { pin.hidden = false; pin.classList.add('auftauchen'); }, ruhig() ? 0 : 750);
+    const welle = $('.zl-welle', this.el);
+    welle.style.left = `${this.anteil(l)}%`;
+    spaeter(() => {
+      pin.hidden = false;
+      pin.classList.add('auftauchen');
+      welle.hidden = false;
+    }, ruhig() ? 0 : 750);
   }
 }
 
@@ -571,10 +662,10 @@ function miniLeiste(r, i, von, bis) {
   const t = anteil(r.tipp);
   const l = anteil(r.werk.jahr);
   return `
-    <div class="mini">
+    <div class="mini" style="--i:${i}">
       <span class="mini-nr">${i + 1}</span>
       <span class="mini-spur">
-        <span class="mini-strecke" style="left:${Math.min(t, l)}%;width:${Math.abs(t - l)}%"></span>
+        <span class="mini-strecke" style="left:${Math.min(t, l)}%;width:${Math.abs(t - l)}%;transform-origin:${t <= l ? 'left' : 'right'}"></span>
         <span class="mini-punkt tipp" style="left:${t}%" title="Dein Tipp: ${r.tipp}"></span>
         <span class="mini-punkt loesung" style="left:${l}%" title="Erschienen: ${r.werk.jahr}"></span>
       </span>
@@ -726,14 +817,26 @@ let challenge = challengeAusUrl();
 const aktuelle = () => spiel.runden[spiel.runde];
 const summe = () => spiel.runden.reduce((s, r) => s + (r.ergebnis ? r.ergebnis.summe : 0), 0);
 
-function standZeigen() {
+function standZeigen(plus = 0) {
   if (!spiel) { stand.innerHTML = ''; return; }
   const runde = spiel.runde < RUNDEN ? `Runde ${spiel.runde + 1} von ${RUNDEN}` : 'Auswertung';
   const art = spiel.art === 'tag' ? 'Tagesaufgabe · ' : spiel.art === 'challenge' ? 'Challenge · ' : '';
-  stand.innerHTML = `<span>${art}${runde}</span><span class="stand-punkte">${zahl(summe())}</span>`;
+  const jetzt = summe();
+  stand.innerHTML = `<span><span class="stand-art">${art}</span>${runde}</span><span class="stand-punkte"><span>${zahl(jetzt - plus)}</span></span>`;
+  if (plus > 0) {
+    const el = $('.stand-punkte', stand);
+    hochzaehlen(el.firstElementChild, jetzt, 700, { von: jetzt - plus });
+    const f = document.createElement('span');
+    f.className = 'plus';
+    f.textContent = `+${zahl(plus)}`;
+    f.setAttribute('aria-hidden', 'true');
+    el.append(f);
+    f.addEventListener('animationend', () => f.remove());
+  }
 }
 
 async function spielStarten({ seed = neuerSeed(), einst = einstellungen, art = 'normal', gegen = null, tag = null, wertung = true } = {}) {
+  planLeeren();
   app.innerHTML = '<p class="laden">Passagen werden geladen …</p>';
   window.scrollTo(0, 0);
   try {
@@ -766,7 +869,9 @@ function rundeZeigen() {
   const r = aktuelle();
   const e = spiel.einst;
   r.fassung = fassung(r.passage, e.schreibung);
+  planLeeren();
   standZeigen();
+  Klang.blatt();
   app.innerHTML = `
     <section class="runde">
       <p class="modus-zeile"><span>${esc(modusText(e))}</span><span id="moeglich"></span></p>
@@ -809,6 +914,7 @@ function rundeZeigen() {
     </section>`;
   window.scrollTo(0, 0);
   textZeigen();
+  tinte($('#passage'));
 
   const anzeige = $('#jahr');
   const knopf = $('#tippen');
@@ -818,6 +924,7 @@ function rundeZeigen() {
     beiAenderung: (j) => {
       anzeige.textContent = j ?? '····';
       anzeige.classList.toggle('gesetzt', j != null);
+      if (knopf.disabled && j != null) knopf.classList.add('bereit');
       knopf.disabled = j == null;
     },
     beiEingabe: (p) => {
@@ -838,6 +945,7 @@ function rundeZeigen() {
   for (const chip of $$('.zusatz .chip')) {
     chip.addEventListener('click', () => {
       if (r.ergebnis) return;
+      Klang.klick();
       r.gattungTipp = r.gattungTipp === chip.dataset.gattung ? null : chip.dataset.gattung;
       for (const c of $$('.zusatz .chip')) c.setAttribute('aria-checked', String(c.dataset.gattung === r.gattungTipp));
     });
@@ -868,6 +976,7 @@ function textZeigen(neu = null) {
   else html = textHtml(f, r.vor, r.nach, neu);
   if (e.bewegung === 'nmpz' && fertig) html = satzMarkieren(html, f.satz);
   el.innerHTML = html;
+  if (neu) tinte(el, (n) => n.parentElement.closest('.neu'), 600);
   if (vorher !== null) {
     const nachher = $('.kern', el);
     if (nachher) window.scrollBy(0, nachher.getBoundingClientRect().top - vorher);
@@ -893,6 +1002,7 @@ function mehrText(richtung) {
   const max = richtung === 'vor' ? r.fassung.vor.length : r.fassung.nach.length;
   if (r[richtung] >= max) return;
   r[richtung] += 1;
+  Klang.blatt(0.6);
   textZeigen(`${richtung}${r[richtung] - 1}`);
 }
 
@@ -920,6 +1030,7 @@ function autorFeld(input, liste, beiWahl) {
     const t = treffer[i];
     if (!t) return;
     input.value = t.name;
+    Klang.klick();
     beiWahl(t.i);
     schliessen();
   };
@@ -974,14 +1085,23 @@ function tippen() {
   $('#zusatz').classList.add('fertig');
   $('#autor-ein').disabled = true;
   for (const c of $$('.zusatz .chip')) c.disabled = true;
+  Klang.stempel();
+  Klang.vibrieren(14);
   zeitleiste.aufloesen(w.jahr);
+  spaeter(() => Klang.strich(0.7), 40);
   textZeigen();
+  // NMPZ: der Rest der Passage erscheint um den markierten Satz herum
+  if (spiel.einst.bewegung === 'nmpz') tinte($('#passage'), (n) => !n.parentElement.closest('mark'), 1200);
 
   const titel = w.untertitel ? `${esc(w.titel)}. <span class="untertitel">${esc(w.untertitel)}</span>` : esc(w.titel);
   const auflage = w.auflage > 1 ? ` · ${w.auflage}. Auflage` : '';
   const autorName = r.autorTipp !== null && r.autorTipp >= 0 ? indexDaten.autoren[r.autorTipp].name : r.autorText;
+  // Zeitplan der Auflösung (ms): Linie, Lösungspin, Blatt, Zeilen, Punkte, Urteil
+  const T = ruhig() ? { pin: 0, blatt: 0, zeile: 0, takt: 0, zaehlen: 0, dauer: 0, urteil: 0 }
+    : { pin: 780, blatt: 900, zeile: 1050, takt: 140, zaehlen: 1150, dauer: 1100, urteil: 2350 };
+  let zeilenNr = 0;
   const zeile = (titelText, text, wert, klasse = '') => `
-    <tr class="${klasse}"><th>${titelText}</th><td>${text}</td><td class="wert">${wert}</td></tr>`;
+    <tr class="${klasse}" style="animation-delay:${T.zeile + T.takt * zeilenNr++}ms"><th>${titelText}</th><td>${text}</td><td class="wert">${wert}</td></tr>`;
   const gattungZeile = erg.gattung === null
     ? zeile('Gattung', 'kein Tipp', '–', 'leer')
     : erg.gattung
@@ -993,12 +1113,14 @@ function tippen() {
   else if (r.autorTipp === -1) autorZeile = zeile('Autor', `<span class="falsch">daneben</span> „${esc(r.autorText)}“ steht nicht im Korpus`, '0');
   else autorZeile = zeile('Autor', `<span class="falsch">daneben</span> dein Tipp: ${esc(autorName)}`, '0');
 
+  const [, urteilText, urteilStufe] = urteil(erg.abstand);
   $('#aufloesung').innerHTML = `
-    <div class="blatt ergebnis">
+    <div class="blatt ergebnis" style="animation-delay:${T.blatt}ms">
       <div class="loesung-kopf">
         <div>
           <span class="loesung-jahr">${w.jahr}</span>
           <span class="abstand">${jahreText(erg.abstand)}</span>
+          <span class="urteil ${urteilStufe}" id="urteil">${urteilText}</span>
         </div>
         <div class="punkte"><span id="punkte">0</span><small>von ${zahl(MAX_RUNDE)}</small></div>
       </div>
@@ -1014,9 +1136,19 @@ function tippen() {
       ${w.hinweis ? `<p class="werk-hinweis">${esc(w.hinweis)}</p>` : ''}
       <p class="werk-link"><a href="${esc(seitenUrl(w, r.passage.seite))}" target="_blank" rel="noopener">Diese Stelle im Faksimile ansehen (Deutsches Textarchiv)&nbsp;↗</a></p>
     </div>
-    <div class="knopf-reihe"><button type="button" class="knopf haupt" id="weiter">${letzte ? 'Zur Auswertung' : 'Nächste Runde'}</button></div>`;
-  hochzaehlen($('#punkte'), erg.summe);
-  standZeigen();
+    <div class="knopf-reihe" style="animation-delay:${T.blatt}ms"><button type="button" class="knopf haupt" id="weiter">${letzte ? 'Zur Auswertung' : 'Nächste Runde'}</button></div>`;
+  spaeter(() => Klang.ergebnis(erg.jahr / MAX_JAHR), T.pin);
+  // Gattung und Autor klingen, wenn ihre Zeile erscheint
+  [erg.gattung, erg.autor].forEach((x, i) => {
+    if (x !== null) spaeter(() => (x ? Klang.richtig() : Klang.falsch()), T.zeile + T.takt * (i + 1) + 60);
+  });
+  spaeter(() => hochzaehlen($('#punkte'), erg.summe, T.dauer || 1, { ton: true }), T.zaehlen);
+  spaeter(() => {
+    $('#urteil').classList.add('landet');
+    Klang.stempel(erg.abstand <= 10 ? 0.8 : 0.5);
+    if (erg.abstand === 0) Klang.triumph();
+    standZeigen(erg.summe);
+  }, T.urteil);
   $('#weiter').addEventListener('click', weiter);
   $('#dock').scrollIntoView({ behavior: ruhig() ? 'auto' : 'smooth', block: 'start' });
   $('#weiter').focus({ preventScroll: true });
@@ -1029,7 +1161,9 @@ function weiter() {
 }
 
 function auswertung() {
+  planLeeren();
   standZeigen();
+  Klang.blatt();
   const sp = spiel;
   const gesamt = summe();
   const schnitt = sp.runden.reduce((s, r) => s + r.ergebnis.abstand, 0) / RUNDEN;
@@ -1044,19 +1178,24 @@ function auswertung() {
     }
   }
   let vergleich = '';
+  let gewonnen = false;
   if (sp.gegen) {
     const gegenSumme = sp.gegen.reduce((s, x) => s + x, 0);
+    gewonnen = gesamt > gegenSumme;
     const urteil = gesamt > gegenSumme ? 'Gewonnen!' : gesamt < gegenSumme ? 'Knapp verfehlt.' : 'Unentschieden.';
     vergleich = `<p class="vergleich"><strong>${urteil}</strong> Die Herausforderung lag bei ${zahl(gegenSumme)} Punkten.</p>`;
   }
+  const anteil = gesamt / (RUNDEN * MAX_RUNDE);
+  const [, rangText, rangStufe] = rang(anteil);
   const hinweise = [];
-  if (sp.bestwert) hinweise.push(`Neuer Bestwert: ${esc(bestName(bestSchluessel(sp.einst)))}`);
+  if (sp.bestwert) hinweise.push(`<span class="glanz">Neuer Bestwert: ${esc(bestName(bestSchluessel(sp.einst)))}</span>`);
   if (sp.art === 'tag') hinweise.push(sp.wertung ? `Tagesaufgabe vom ${datumText(sp.tag)}` : 'Wiederholung der Tagesaufgabe, zählt nicht für die Statistik');
 
   app.innerHTML = `
     <section class="auswertung">
       <h1 class="seitentitel">Auswertung</h1>
       <p class="gesamt"><span id="gesamt">0</span> <small>von ${zahl(RUNDEN * MAX_RUNDE)} Punkten</small></p>
+      <p class="rang"><span class="urteil gross ${rangStufe}" id="rang">${rangText}</span></p>
       <p class="schnitt">Im Schnitt ${zahl(Math.round(schnitt * 10) / 10)} Jahre daneben · ${esc(modusText(sp.einst))}</p>
       ${hinweise.map((h) => `<p class="hinweis-zeile">${h}</p>`).join('')}
       ${vergleich}
@@ -1078,7 +1217,14 @@ function auswertung() {
       </div>
     </section>`;
   window.scrollTo(0, 0);
-  hochzaehlen($('#gesamt'), gesamt, 1500);
+  const T = ruhig() ? { zaehlen: 0, rang: 0, jubel: 0 } : { zaehlen: 250, rang: 1850, jubel: 2600 };
+  spaeter(() => hochzaehlen($('#gesamt'), gesamt, 1500, { ton: true }), T.zaehlen);
+  spaeter(() => {
+    $('#rang').classList.add('landet');
+    Klang.stempel(0.8);
+    Klang.schluss(anteil);
+  }, T.rang);
+  if (sp.bestwert || gewonnen) spaeter(() => Klang.triumph(), T.jubel);
   $('#nochmal').addEventListener('click', () => spielStarten());
   $('#zur-statistik').addEventListener('click', statistikZeigen);
   $('#zum-start').addEventListener('click', startseite);
@@ -1100,7 +1246,7 @@ function rueckblickHtml(r, i, sp) {
   const f = r.fassung;
   const text = sp.einst.bewegung === 'nmpz' ? satzMarkieren(textHtml(f, 0, 0), f.satz) : textHtml(f, 0, 0);
   return `
-    <li class="blatt">
+    <li class="blatt" style="--i:${i}">
       <div class="rb-kopf">
         <span class="rb-nr">${i + 1}</span>
         <span class="rb-werk"><span class="werk-autor">${esc(r.werk.autor)}</span>
@@ -1133,7 +1279,7 @@ function balkenTabelle(titel, daten, reihenfolge) {
       ${zeilenDaten.map((z) => `
         <tr>
           <th>${esc(z.k)}</th>
-          <td class="balken-zelle"><span class="balken-strich" style="width:${(z.schnitt / max) * 100}%"></span></td>
+          <td class="balken-zelle"><span class="balken-strich" style="width:${(z.schnitt / max) * 100}%;--i:${zeilenDaten.indexOf(z)}"></span></td>
           <td class="wert">Ø ${zahl(Math.round(z.schnitt))} J.</td>
           <td class="neben">${tendenz(z.richtung)} · ${z.n}&thinsp;×</td>
         </tr>`).join('')}
@@ -1141,8 +1287,10 @@ function balkenTabelle(titel, daten, reihenfolge) {
 }
 
 function statistikZeigen() {
+  planLeeren();
   spiel = null;
   standZeigen();
+  Klang.blatt();
   const st = statistikLesen();
   const quote = ([n, r]) => (n ? `${Math.round((r / n) * 100)} %` : '–');
   const datum = (iso) => iso.split('-').reverse().join('.');
@@ -1157,9 +1305,9 @@ function statistikZeigen() {
     const beste = Object.entries(st.beste).sort((a, b) => b[1].punkte - a[1].punkte);
     inhalt = `
       <div class="blatt kennzahlen">
-        <div><span>${zahl(st.spiele)}</span><small>Spiele</small></div>
-        <div><span>${zahl(Math.round(st.punkte / st.runden))}</span><small>Ø Punkte je Runde</small></div>
-        <div><span>${zahl(Math.round(st.abstand / st.runden))}</span><small>Ø Jahre daneben</small></div>
+        <div><span data-ziel="${st.spiele}">${zahl(st.spiele)}</span><small>Spiele</small></div>
+        <div><span data-ziel="${Math.round(st.punkte / st.runden)}">${zahl(Math.round(st.punkte / st.runden))}</span><small>Ø Punkte je Runde</small></div>
+        <div><span data-ziel="${Math.round(st.abstand / st.runden)}">${zahl(Math.round(st.abstand / st.runden))}</span><small>Ø Jahre daneben</small></div>
         <div><span>${quote(st.gattung)}</span><small>Gattung richtig</small></div>
         <div><span>${quote(st.autor)}</span><small>Autor richtig</small></div>
       </div>
@@ -1194,6 +1342,7 @@ function statistikZeigen() {
       <div class="knopf-reihe"><button type="button" class="knopf haupt" id="zum-start">Zur Startseite</button></div>
     </section>`;
   window.scrollTo(0, 0);
+  for (const el of $$('[data-ziel]')) hochzaehlen(el, Number(el.dataset.ziel), 900);
   $('#zum-start').addEventListener('click', startseite);
   const reset = $('#zuruecksetzen');
   if (reset) {
@@ -1215,15 +1364,17 @@ function auswahlHtml(name, optionen, gewaehlt, mehrfach) {
 }
 
 function startseite() {
+  planLeeren();
   spiel = null;
   standZeigen();
+  Klang.blatt(0.7);
   const e = einstellungen;
   const tag = tagHeute();
   const erledigt = tageLesen()[tag];
   const ch = challenge;
   app.innerHTML = `
     <section class="start">
-      <h1 class="titel">ANNO</h1>
+      <h1 class="titel" aria-label="ANNO">${[...'ANNO'].map((b, i) => `<span style="--i:${i}" aria-hidden="true">${b}</span>`).join('')}</h1>
       <p class="unterzeile">GeoGuessr für die deutsche Sprachgeschichte</p>
       ${ch ? `
       <div class="blatt challenge">
@@ -1296,6 +1447,10 @@ function startseite() {
           <p><strong>Speicher.</strong> Einstellungen, Statistik und Tagesaufgaben bleiben nur in diesem Browser (localStorage).</p>
           <p><strong>Faksimiles.</strong> Die Links führen zur jeweiligen Seite im DTA. Die Rechte an den Bilddigitalisaten liegen bei den besitzenden Bibliotheken.</p>
           <p><strong>Schriften.</strong> EB Garamond (Georg Duffner, Octavio Pardo) und Cardo (David J. Perry), beide unter der SIL Open Font License.</p>
+          <p><strong>Musik.</strong> Johann Sebastian Bach, Goldberg-Variationen BWV 988: Aria und Variationen 13, 21 und 25,
+            gespielt von Kimiko Ishizaka (<a href="https://archive.org/details/OpenGoldbergVariations" target="_blank" rel="noopener">The Open Goldberg Variations</a>, 2012),
+            gemeinfrei (CC0). Die Musik ist für alle Passagen dieselbe und verrät nichts. Die Klänge erzeugt der Browser selbst.
+            Musik und Klänge lassen sich oben rechts abschalten, die Musik auch mit der Taste M.</p>
         </div>
       </details>
     </section>`;
@@ -1311,6 +1466,7 @@ function startseite() {
   for (const chip of $$('.einstellungen .chip')) {
     chip.addEventListener('click', () => {
       const { feld, wert } = chip.dataset;
+      Klang.klick();
       const neu = { ...einstellungen };
       if (feld === 'gattungen' || feld === 'jh') {
         const liste = neu[feld].includes(wert) ? neu[feld].filter((x) => x !== wert) : [...neu[feld], wert];
@@ -1370,6 +1526,28 @@ window.addEventListener('keydown', (e) => {
   if (!r.ergebnis) tippen();
   else weiter();
 });
+
+// Musik und Klänge
+function schalterZeigen() {
+  $('#musik-knopf').setAttribute('aria-pressed', String(Klang.musik));
+  $('#klang-knopf').setAttribute('aria-pressed', String(Klang.effekte));
+}
+$('#musik-knopf').addEventListener('click', () => {
+  meldung(Klang.musikSchalten() ? 'Musik an' : 'Musik aus');
+  schalterZeigen();
+});
+$('#klang-knopf').addEventListener('click', () => {
+  meldung(Klang.effekteSchalten() ? 'Klänge an' : 'Klänge aus');
+  schalterZeigen();
+});
+window.addEventListener('keydown', (e) => {
+  if ((e.key !== 'm' && e.key !== 'M') || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.target.closest('input, select, textarea, [contenteditable]')) return;
+  meldung(Klang.musikSchalten() ? 'Musik an' : 'Musik aus');
+  schalterZeigen();
+});
+Klang.beiTitel(meldung);
+schalterZeigen();
 
 $('.marke').addEventListener('click', (e) => {
   e.preventDefault();

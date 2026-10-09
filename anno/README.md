@@ -48,6 +48,36 @@ Die Einstellungen bleiben im Browser gespeichert.
 - **Enter** tippt bzw. geht zur nächsten Runde.
 - Nach der Auflösung darf man kostenlos weiterlesen (Absatz davor/danach).
   Im NMPZ-Modus erscheint dann die ganze Passage mit dem markierten Satz.
+- **Musik und Klänge** lassen sich oben rechts getrennt abschalten, die Musik
+  auch mit der Taste **M**. Beides startet erst mit dem ersten Klick oder
+  Tastendruck (so verlangen es die Browser) und wird im Browser gespeichert
+  (`anno.klang`, die Stelle im Stück unter `anno.musik`). Ist der Tab im
+  Hintergrund, pausiert die Musik.
+
+### Musik, Klänge und Animationen
+
+- **Musik**: J. S. Bach, Goldberg-Variationen BWV 988 (Aria, Variationen 13,
+  21 und 25), gespielt von Kimiko Ishizaka, gemeinfrei (CC0). Die Stücke
+  laufen in zufälliger Reihenfolge, beginnend mit der Aria, und hängen nie von
+  der Passage ab. Bei einem Ergebnis wird die Musik kurz leiser.
+- **Klänge** erzeugt `klang.js` mit der Web Audio API, es gibt dafür keine
+  Dateien: Blättern beim Seitenwechsel, ein Nadelklick beim Setzen des Pins,
+  leises Ticken über den Jahrzehnten beim Ziehen, ein Stempel beim Tippen,
+  Federkratzen, während sich die Linie zum Lösungsjahr zieht, und gezupfte
+  Töne für das Ergebnis (je näher, desto voller), für Gattung und Autor und
+  als Schlusskadenz. Die Töne sind nur G und D (ohne Terz), damit sie zu den
+  Stücken in G-Dur und g-Moll passen. Auf dem Handy vibriert es kurz beim
+  Setzen des Pins und beim Tippen, wo der Browser das kann.
+- **Animationen**: Die Passage erscheint Wort für Wort wie frische Tinte, die
+  Zeitleiste zeichnet sich von links, der Pin fällt, das Lösungsjahr erscheint
+  mit einer Welle. Danach kommt das Ergebnisblatt mit gestaffelten Zeilen,
+  hochzählenden Punkten und einem Urteil als Stempel (Aufs Jahr genau,
+  Volltreffer bis 3 Jahre, Sehr nah bis 10, Gut geschätzt bis 25, Ordentlich
+  bis 50, Daneben bis 100, sonst Weit daneben). Die Auswertung zieht die fünf
+  Tipps nacheinander zur Lösung und vergibt einen Rang nach dem Anteil an den
+  25.000 möglichen Punkten: Meisterhaft ab 88 %, Sehr belesen ab 70 %,
+  Belesen ab 50 %, Solide ab 32 %, Lehrjahre ab 15 %, sonst Erste Seiten.
+  Mit „Bewegung reduzieren“ im System entfallen alle Animationen.
 
 ### Wertung (höchstens 5.000 pro Runde)
 
@@ -253,6 +283,8 @@ Regieanweisung mitten in einer Rede steht in `⟨…⟩`.
 | Datei | Inhalt |
 | --- | --- |
 | `index.html`, `style.css`, `app.js` | Oberfläche und Spiel |
+| `klang.js` | Musik und Klänge (Web Audio) |
+| `musik/` | Vier Goldberg-Variationen als MP3 (mono, normalisiert, CC0) |
 | `data/passages.json` | Index aller Werke |
 | `data/passages/*.json` | Passagen je Werk |
 | `fonts/` | EB Garamond und Cardo als WOFF2-Untermengen, mit Lizenzen |
