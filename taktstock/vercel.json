@@ -1,0 +1,8 @@
+{
+  "framework": null,
+  "buildCommand": null,
+  "outputDirectory": ".",
+  "headers": [
+    { "source": "/audio/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
+  ]
+}
