@@ -945,6 +945,7 @@ def nachbessern(s):
     s = re.sub(r'[ \t]+', ' ', s).strip()
     s = s.replace(' --', ' –').replace('--', '–')
     s = re.sub(r"(?<=[^\W\d_]e)'(?=[\s,.;:!?]|$)", '', s)
+    s = re.sub(r'(?<=[^\W\d_]) (?=[.,;:!?](?! ?\.))', '', s)   # Reintext: Leerzeichen, wo eine Fußnote stand
     s = re.sub(r'(?<=[^\W\d_])/(?=\s)', ',', s)
     s = re.sub(r'\s+/\s+', ', ', s)
     aus, auf = [], True
