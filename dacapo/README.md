@@ -33,6 +33,10 @@ auch offline (Service Worker).
   nicht“).
 - Zwischen den Abenden geht es ins Foyer: Stars engagieren, Rezensionen
   kaufen, Werke proben, Pakete öffnen, investieren.
+- Für volle Kassen gibt es dort das **Festspielhaus**: Jeder Bauabschnitt
+  (Grundstein, Bühnenturm, Mystischer Abgrund …) multipliziert die
+  Begeisterung jeder Vorstellung dauerhaft mit ×1,5 und kostet doppelt so viel
+  wie der vorige – 25, 50, 100, 200 … Dukaten, ohne Obergrenze.
 
 ### Programme
 
@@ -60,6 +64,7 @@ Passen mehrere, spielt das Haus die stärkste Lesart.
   Cav/Pag, Il trittico, „Uraufgeführt in Leipzig“ und mehr
 - **17 Kritiker** plus zwei Finalgegner in Bayreuth
 - **10 Rezensionen** (LVZ bis Deutschlandfunk Kultur), **11 Proben**, **9 Investitionen**
+- **Das Festspielhaus** als Großprojekt ohne Ende, damit Dukaten nie wertlos werden
 - **6 Startrepertoires** zum Freischalten und **5 Strengestufen**
 - **Spielplan des Tages**: ein Lauf mit festem Zufall, für alle gleich
 - **Werkverzeichnis** über alle Läufe: gespielte Werke, Sternstunden, Stars, Statistik
@@ -91,4 +96,4 @@ Passen mehrere, spielt das Haus die stärkste Lesart.
 | `js/audio.js` | Klang und Musik (Web Audio) |
 | `js/fx.js` | Rosen, Goldstaub, Konfetti |
 | `js/speicher.js` | Speicherstand im Browser |
-| `tools/sim.mjs` | Balance-Simulation (`node tools/sim.mjs leipzig 100`) |
+| `tools/sim.mjs` | Balance-Simulation (`node tools/sim.mjs leipzig 100`, mit `ohne-haus` als drittem Argument baut der Bot kein Festspielhaus) |

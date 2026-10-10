@@ -6,7 +6,7 @@
 import {
   WERK, WERKE, KOMPONISTEN, SCHUL_IDS, epocheVon, PROGRAMME, PROGRAMM_IDS, STERNSTUNDEN,
   STARS, STAR, PROBEN, PROBE, INVESTITIONEN, INVESTITION, KRITIKER, FINAL_KRITIKER,
-  HAEUSER, GASTSPIELE, ZIELE, ABENDE, REPERTOIRE, REZENSIONEN,
+  HAEUSER, GASTSPIELE, ZIELE, ABENDE, REPERTOIRE, REZENSIONEN, FESTSPIELHAUS,
 } from './data.js';
 
 export const VERSION = 1;
@@ -76,7 +76,7 @@ export function neuerLauf({ deck = 'leipzig', strenge = 1, seed = (Math.random()
     handSize: 8 + (def.bonus?.handSize || 0),
     haende: 4,
     umbes: 3 + (def.bonus?.discards || 0) - (strenge >= 4 ? 1 : 0),
-    investitionen: [], foyerPlaetze: 2,
+    investitionen: [], foyerPlaetze: 2, bau: 0,
     kritiker: {}, kritikerGehabt: [], investAngebot: {},
     sortierung: 'komponist',
     round: null, shop: null, pack: null, bravo: null,
@@ -565,6 +565,9 @@ export function auffuehren(run, uidsGewaehlt) {
     run.stats.sternstunden[st.id] = (run.stats.sternstunden[st.id] || 0) + 1;
   }
 
+  const hausX = nichtig ? 1 : hausFaktor(run);
+  if (hausX > 1) { B *= hausX; S({ t: 'haus', v: hausX }); }
+
   const gesamt = Math.floor(P * B);
 
   // Buchhaltung
@@ -831,6 +834,29 @@ export function investieren(run) {
       break;
     default: break;
   }
+  return null;
+}
+
+// ------------------------------------------------------------------ Festspielhaus
+
+// Ältere Spielstände kennen das Festspielhaus noch nicht.
+export const bauStand = (run) => run.bau || 0;
+export const hausFaktor = (run, n = bauStand(run)) => FESTSPIELHAUS.faktor ** n;
+export const bauPreis = (run, n = bauStand(run)) => FESTSPIELHAUS.preis * 2 ** n;
+
+/** Name und Text des Bauabschnitts n (ab 0). Nach dem Königsbau wird nur noch ausgebaut. */
+export function bauabschnitt(n) {
+  const liste = FESTSPIELHAUS.abschnitte;
+  if (n < liste.length) return liste[n];
+  return { name: `${n - liste.length + 1}. Ausbau`, text: 'Der Hügel wächst weiter.' };
+}
+
+export function bauen(run) {
+  if (run.phase !== 'shop') return 'Gebaut wird im Foyer.';
+  const preis = bauPreis(run);
+  if (run.geld < preis) return 'Zu wenig Dukaten.';
+  run.geld -= preis;
+  run.bau = bauStand(run) + 1;
   return null;
 }
 

@@ -1,11 +1,13 @@
 // Balance-Simulation: Wie oft lässt sich welches Programm aus acht Karten
 // bilden, und wie weit kommt ein gieriger Bot?
-//   node tools/sim.mjs [deck] [läufe]
+//   node tools/sim.mjs [deck] [läufe] [ohne-haus]
 import * as L from '../js/logic.js';
 import { PROGRAMME, PROGRAMM_IDS, STAR } from '../js/data.js';
 
 const deck = process.argv[2] || 'leipzig';
 const N = Number(process.argv[3] || 300);
+// Mit „ohne-haus“ als drittem Argument baut der Bot kein Festspielhaus.
+const bauen = process.argv[4] !== 'ohne-haus';
 
 function teilmengen(arr, max = 5) {
   const out = [];
@@ -88,6 +90,7 @@ function botFoyer(run, mitStars) {
     if ((a.art === 'star' || a.art === 'rez') && run.geld >= a.preis) L.kaufen(run, i);
   }
   if (run.investAngebot[run.station] && run.geld >= 14) L.investieren(run);
+  if (bauen) while (run.geld >= L.bauPreis(run)) L.bauen(run);
   L.foyerVerlassen(run);
 }
 

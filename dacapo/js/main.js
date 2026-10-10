@@ -7,7 +7,7 @@ import { icon } from './icons.js';
 import {
   WERK, WERKE, KOMPONISTEN, SCHULEN, EPOCHEN, epocheVon, PROGRAMME, PROGRAMM_IDS, STERNSTUNDEN,
   STARS, STAR, RARITAET, PROBE, VEREDELUNG, INVESTITION, KRITIK, HAEUSER, GASTSPIELE, ABENDE,
-  REPERTOIRES, REPERTOIRE, STRENGE, REZENSIONEN, fmtX,
+  REPERTOIRES, REPERTOIRE, STRENGE, REZENSIONEN, FESTSPIELHAUS, fmtX,
 } from './data.js';
 import {
   ladeLauf, speichereLauf, loescheLauf, ladeMeta, speichereMeta, ladeEinst, speichereEinst, pruefeFreischaltungen,
@@ -149,6 +149,10 @@ function zettelHTML(art, id, extra = {}) {
   if (art === 'invest') {
     const v = INVESTITION[id];
     return `<div class="zettel invest">${icon('haus')}<div class="z-kopf">${v.name}</div><div class="z-text">${v.text}</div></div>`;
+  }
+  if (art === 'haus') {
+    const n = L.bauStand(run);
+    return `<div class="zettel haus">${icon('haus')}<div class="z-kopf">Festspiel\u00adhaus</div><div class="z-art">${L.bauabschnitt(n).name}</div><div class="z-text">${n ? `×${fmtX(L.hausFaktor(run))} → ` : ''}×${fmtX(L.hausFaktor(run, n + 1))} Begeisterung</div></div>`;
   }
   return '';
 }
@@ -399,7 +403,7 @@ function stageHTML() {
   return `<div class="stage" id="stage">
     ${k ? `<div class="stage-kritiker"><b>${k.name}:</b> ${k.regel}</div>` : ''}
     <div class="stage-prog" id="progName">&nbsp;</div>
-    <div class="formel"><div class="box box-p"><span class="lbl">Publikum</span><span id="fP">0</span></div><span class="mal">×</span><div class="box box-b"><span class="lbl">Begeisterung</span><span id="fB">0</span></div></div>
+    <div class="formel"><div class="box box-p"><span class="lbl">Publikum</span><span id="fP">0</span></div><span class="mal">×</span><div class="box box-b"><span class="lbl">Begeisterung</span><span id="fB">0</span></div>${L.bauStand(run) ? `<span class="haus-x" id="hausX" data-akt="hausInfo" title="Festspielhaus">${icon('haus')}<b>×${fmtX(L.hausFaktor(run))}</b></span>` : ''}</div>
     <div class="gesamt" id="gesamt"></div>
     <div class="gespielt" id="gespielt"></div>
     <div class="hinweis" id="hinweis"></div>
@@ -559,6 +563,7 @@ function foyerHTML() {
     return `<div class="ware ${a.verkauft ? 'verkauft' : ''}" data-akt="ware" data-i="${i}">${inhalt}<span class="preis ${run.geld < a.preis ? 'zu-teuer' : ''}">${muenze(a.preis)}</span></div>`;
   }).join('');
   const pakete = sh.pakete.map((p, i) => `<div class="ware ${p.gekauft ? 'verkauft' : ''}" data-akt="paketInfo" data-i="${i}">${zettelHTML('paket', p.art)}<span class="preis ${run.geld < p.preis ? 'zu-teuer' : ''}">${muenze(p.preis)}</span></div>`).join('');
+  const haus = `<div class="ware" data-akt="hausInfo">${zettelHTML('haus')}<span class="preis ${run.geld < L.bauPreis(run) ? 'zu-teuer' : ''}">${muenze(L.bauPreis(run))}</span></div>`;
   const inv = invId ? `<div class="ware" data-akt="investInfo">${zettelHTML('invest', invId)}<span class="preis ${run.geld < INVESTITION[invId].preis ? 'zu-teuer' : ''}">${muenze(INVESTITION[invId].preis)}</span></div>` : '';
   return `<div class="panel foyer">
     <div class="foyer-kopf">
@@ -569,6 +574,7 @@ function foyerHTML() {
     <div class="foyer-reihe">
       <div class="foyer-sektion"><span class="klein">Pakete</span><div class="foyer-reihe">${pakete}</div></div>
       ${inv ? `<div class="foyer-sektion"><span class="klein">Investition</span><div class="foyer-reihe">${inv}</div></div>` : ''}
+      <div class="foyer-sektion"><span class="klein">Großprojekt</span><div class="foyer-reihe">${haus}</div></div>
     </div>
     <div class="foyer-knoepfe">
       <button class="btn btn-blau" data-akt="reroll" ${run.geld >= sh.reroll ? '' : 'disabled'}>Neu disponieren<small>${muenze(sh.reroll)}</small></button>
@@ -785,6 +791,16 @@ async function spielen() {
         if (s.i != null) { starEl(s.i)?.classList.add('wackeln'); flug(s.text, 'w', starEl(s.i), true); }
         await warte(240);
         break;
+      case 'haus': {
+        const el = $('#hausX');
+        flug(`×${fmtX(s.v)}`, 'x', el ?? fB);
+        pulsiere(el);
+        fB.textContent = fmtB(s.B); pulsiere(fB.parentElement);
+        A.faktor();
+        const rr = rectVon(fB); if (rr) FX.goldstaub(rr.left + rr.width / 2, rr.top + rr.height / 2, 14);
+        await warte(420);
+        break;
+      }
       case 'stern': {
         const neu = neuMeta.neueStern.includes(s.id);
         A.sternstunde();
@@ -1160,6 +1176,22 @@ function investSheet() {
     <button class="btn btn-gold" data-akt="investKaufen" ${run.geld >= v.preis ? '' : 'disabled'}>Investieren · ${muenze(v.preis)}</button></div>`);
 }
 
+function hausSheet() {
+  const n = L.bauStand(run);
+  const a = L.bauabschnitt(n);
+  const preis = L.bauPreis(run);
+  const stand = n
+    ? `Festspielhaus jetzt: {x:×${fmtX(L.hausFaktor(run))}}, danach {x:×${fmtX(L.hausFaktor(run, n + 1))}}. Gebaut: ${Array.from({ length: n }, (_, i) => L.bauabschnitt(i).name).join(', ')}.`
+    : 'Noch steht nichts – der Grundstein ist der erste Bauabschnitt.';
+  const imFoyer = run.phase === 'shop';
+  sheet(`<div class="sh-kopf">${zettelHTML('haus')}<div><span class="klein">Großprojekt · Bauabschnitt ${n + 1}</span><h3>${a.name}</h3></div></div>
+    <p class="sh-text">${a.text}</p>
+    <p class="sh-text">${markup(`Jeder Bauabschnitt multipliziert die Begeisterung jeder Vorstellung mit {x:×${fmtX(FESTSPIELHAUS.faktor)}} – für den Rest der Spielzeit, nach allen Stars und Sternstunden. Der nächste kostet jeweils doppelt so viel.`)}</p>
+    <p class="sh-wert">${markup(stand)}</p>
+    <div class="sh-knoepfe"><button class="btn" data-akt="sheetZu">Zurück</button>
+    ${imFoyer ? `<button class="btn btn-gold" data-akt="hausBauen" ${run.geld >= preis ? '' : 'disabled'}>Bauen · ${muenze(preis)}</button>` : `<button class="btn" disabled>Gebaut wird im Foyer · ${muenze(preis)}</button>`}</div>`);
+}
+
 function bestaetigen(text, akt, knopf = 'Ja') {
   sheet(`<p class="sh-text" style="font-size:1.05rem">${text}</p>
     <div class="sh-knoepfe"><button class="btn" data-akt="sheetZu">Abbrechen</button><button class="btn btn-rot" data-akt="${akt}">${knopf}</button></div>`);
@@ -1286,6 +1318,7 @@ function zeigeAnleitung() {
         <li><b>Rezensionen</b> heben ein Programm sofort um eine Stufe.</li>
         <li><b>Proben</b> verändern Werke: Neuinszenierung, Starbesetzung, Übersetzung, Streichung …</li>
         <li><b>Werke</b> und <b>Pakete</b> erweitern dein Repertoire, <b>Investitionen</b> gelten für die ganze Spielzeit.</li>
+        <li>Das <b>Festspielhaus</b> ist das Großprojekt für volle Kassen: Jeder Bauabschnitt multipliziert die Begeisterung dauerhaft mit ×1,5 und kostet doppelt so viel wie der vorige (25, 50, 100 … Dukaten).</li>
       </ul></div>
     <div class="ov-sektion"><h3>Tastatur</h3>
       <p><b>1–9</b> Werk wählen · <b>Enter</b> Aufführen · <b>U</b> Umbesetzen · <b>S</b> Sortierung · <b>P</b> Programme · <b>Esc</b> schließen</p></div>`);
@@ -1377,6 +1410,16 @@ const AKTIONEN = {
   },
   paketSkip: () => { L.paketWaehlen(run, null); renderSpiel(); speichern(); },
   investInfo: () => investSheet(),
+  hausInfo: () => { A.klick(); hausSheet(); },
+  hausBauen: () => {
+    const n = L.bauStand(run);
+    const f = L.bauen(run);
+    if (f) { toast(f); return; }
+    sheetZu(); A.geld(); A.sternstunde();
+    banner(`<span class="b-klein">Festspielhaus · Bauabschnitt ${n + 1}</span><span class="b-gross">${L.bauabschnitt(n).name}</span><span class="b-x">×${fmtX(L.hausFaktor(run))} Begeisterung</span>`, 1700);
+    FX.goldstaub(window.innerWidth / 2, window.innerHeight * 0.42, 30);
+    renderSpiel(); speichern();
+  },
   investKaufen: () => { const f = L.investieren(run); if (f) { toast(f); return; } sheetZu(); A.geld(); toast('Investiert.', 'gut'); renderSpiel(); speichern(); },
   starVerkaufen: (el) => { L.starVerkaufen(run, Number(el.dataset.i)); sheetZu(); A.geld(); renderSpiel(); if (run.phase === 'abend') renderVorschau(); speichern(); },
   starLinks: (el) => { const j = L.starVerschieben(run, Number(el.dataset.i), -1); renderEnsemble(); starSheet(j); speichern(); },

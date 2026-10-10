@@ -255,7 +255,7 @@ b { font-weight: 700; }
 .stage-kritiker { font-size: .8rem; color: #ffb4aa; text-align: center; background: rgba(120, 10, 20, .35); border: 1px solid rgba(255, 120, 110, .3); border-radius: 999px; padding: 2px 12px; }
 .stage-prog { font-family: var(--f-disp); font-size: clamp(1.15rem, 4.6vw, 1.7rem); font-weight: 700; color: var(--gold-h); text-align: center; min-height: 1.4em; line-height: 1.2; }
 .stage-prog small { font-family: var(--f-ui); font-size: .62em; color: var(--text-m); font-weight: 500; margin-left: .4em; }
-.formel { display: flex; align-items: center; gap: 8px; }
+.formel { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 8px; }
 .formel .box {
   min-width: clamp(84px, 24vw, 130px); border-radius: 12px; padding: 4px 12px; text-align: right;
   font-size: clamp(1.35rem, 6vw, 2rem); font-weight: 700; font-variant-numeric: tabular-nums; color: #fff;
@@ -266,6 +266,12 @@ b { font-weight: 700; }
 .formel .box-b { background: linear-gradient(#e6564a, #9f241d); text-align: left; }
 .formel .mal { font-size: 1.6rem; color: var(--gold-h); font-weight: 700; }
 .formel .lbl { display: block; font-size: .6rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; opacity: .85; line-height: 1; margin-top: 3px; }
+.haus-x {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px 3px 7px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--gold-d); background: linear-gradient(165deg, #6b3a22, #2e1408); color: var(--gold-h);
+  font-weight: 700; font-size: clamp(.85rem, 3.4vw, 1rem); font-variant-numeric: tabular-nums;
+}
+.haus-x .ic { width: 1.15em; height: 1.15em; }
 .gesamt { font-family: var(--f-disp); font-weight: 900; font-size: clamp(1.8rem, 9vw, 3rem); color: var(--gold-h); min-height: 0; line-height: 1; text-shadow: 0 0 24px rgba(236, 210, 127, .5); }
 .gesamt:empty { display: none; }
 .gespielt { display: flex; gap: 8px; justify-content: center; min-height: 0; --kw: var(--kw-stage, 96px); }
@@ -459,6 +465,15 @@ b { font-weight: 700; }
 .zettel.invest { background: linear-gradient(165deg, #22324a, #0e1626); color: var(--text); border: 1.5px solid #8fb7e6; }
 .zettel.invest .z-kopf { border-color: #8fb7e6; color: #cfe2fa; }
 .zettel.invest .ic { color: #8fb7e6; }
+.zettel.haus { position: relative; background: linear-gradient(165deg, #6b3a22, #2e1408); color: var(--text); border: 1.5px solid var(--gold-h); }
+.zettel.haus .z-kopf { border-color: var(--gold); color: var(--gold-h); }
+.zettel.haus .z-art { color: var(--creme-d); }
+.zettel.haus .ic { color: var(--gold-h); }
+.zettel.haus::after {
+  content: ''; position: absolute; inset: 0; border-radius: 8px; pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 240, 190, .2) 45%, transparent 60%);
+  background-size: 250% 100%; animation: glanz 4.5s linear infinite;
+}
 
 .wahl-reihe { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
 .wahl { display: flex; flex-direction: column; align-items: center; gap: 8px; width: var(--wahl); }

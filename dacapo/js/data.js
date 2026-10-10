@@ -385,6 +385,24 @@ export const INVESTITIONEN = [
 ];
 export const INVESTITION = Object.fromEntries(INVESTITIONEN.map((v) => [v.id, v]));
 
+// Das Festspielhaus: ein Großprojekt ohne Ende, für die Dukaten, die sonst
+// nur noch herumliegen. Jeder Bauabschnitt multipliziert die Begeisterung
+// dauerhaft und kostet doppelt so viel wie der vorige.
+export const FESTSPIELHAUS = {
+  preis: 25,
+  faktor: 1.5,
+  abschnitte: [
+    { name: 'Grundstein', text: 'Gelegt am 22. Mai 1872, Wagners 59. Geburtstag.' },
+    { name: 'Bühnenturm', text: 'Hoch genug für Walhall, tief genug für den Rhein.' },
+    { name: 'Mystischer Abgrund', text: 'Das Orchester verschwindet unter dem Schalldeckel.' },
+    { name: 'Amphitheater', text: 'Ansteigende Reihen wie im antiken Theater – jeder Platz blickt auf die Bühne.' },
+    { name: 'Holzgestühl', text: 'Hart, aber akustisch unschlagbar.' },
+    { name: 'Dunkler Saal', text: 'Das Saallicht wird gedämpft, alle Augen gehen zur Bühne.' },
+    { name: 'Fanfarenbalkon', text: 'Blechbläser rufen das Publikum aus dem Park.' },
+    { name: 'Königsbau', text: 'Der Vorbau für den königlichen Besuch.' },
+  ],
+};
+
 // Kritiker: die Herrschaften am dritten Abend jeder Station.
 export const KRITIKER = [
   { id: 'purist', name: 'Der Purist', regel: 'Werke nach 1900 zählen nicht.' },
