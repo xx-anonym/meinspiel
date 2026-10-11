@@ -581,7 +581,8 @@ function foyerHTML() {
     else inhalt = zettelHTML(a.art, a.id);
     return `<div class="ware ${a.verkauft ? 'verkauft' : ''}" data-akt="ware" data-i="${i}">${inhalt}<span class="preis ${run.geld < a.preis ? 'zu-teuer' : ''}">${muenze(a.preis)}</span></div>`;
   }).join('');
-  const pakete = sh.pakete.map((p, i) => `<div class="ware ${p.gekauft ? 'verkauft' : ''}" data-akt="paketInfo" data-i="${i}">${zettelHTML('paket', p.art)}<span class="preis ${run.geld < p.preis ? 'zu-teuer' : ''}">${muenze(p.preis)}</span></div>`).join('');
+  // Ein Paket für 0 Dukaten gibt es nur mit dem Gutschein „Freikarten“.
+  const pakete = sh.pakete.map((p, i) => `<div class="ware ${p.gekauft ? 'verkauft' : ''} ${p.preis === 0 ? 'gratis' : ''}" data-akt="paketInfo" data-i="${i}">${p.preis === 0 ? '<span class="gratis-band">Freikarte</span>' : ''}${zettelHTML('paket', p.art)}<span class="preis ${run.geld < p.preis ? 'zu-teuer' : ''}">${p.preis === 0 ? 'gratis' : muenze(p.preis)}</span></div>`).join('');
   const haus = `<div class="ware" data-akt="hausInfo">${zettelHTML('haus')}<span class="preis ${run.geld < L.bauPreis(run) ? 'zu-teuer' : ''}">${muenze(L.bauPreis(run))}</span></div>`;
   const inv = invId ? `<div class="ware" data-akt="investInfo">${zettelHTML('invest', invId)}<span class="preis ${run.geld < INVESTITION[invId].preis ? 'zu-teuer' : ''}">${muenze(INVESTITION[invId].preis)}</span></div>` : '';
   return `<div class="panel foyer">
@@ -1207,8 +1208,9 @@ function paketSheet(i) {
   const P = L.PAKETE[p.art];
   sheet(`<div class="sh-kopf">${zettelHTML('paket', p.art)}<div><span class="klein">Paket</span><h3>${P.name}</h3></div></div>
     <p class="sh-text">${P.text}</p>
+    ${p.preis === 0 ? '<p class="sh-wert" style="color:var(--gold-h)">Dieses Paket geht auf deine Freikarten – es kostet nichts.</p>' : ''}
     <div class="sh-knoepfe"><button class="btn" data-akt="sheetZu">Zurück</button>
-    <button class="btn btn-gold" data-akt="paketKaufen" data-i="${i}" ${run.geld >= p.preis ? '' : 'disabled'}>Öffnen · ${muenze(p.preis)}</button></div>`);
+    <button class="btn btn-gold" data-akt="paketKaufen" data-i="${i}" ${run.geld >= p.preis ? '' : 'disabled'}>Öffnen · ${p.preis === 0 ? 'gratis' : muenze(p.preis)}</button></div>`);
 }
 
 function investSheet() {

@@ -483,6 +483,14 @@ b { font-weight: 700; }
 .ware.verkauft { opacity: .25; pointer-events: none; }
 .preis { font-weight: 700; color: var(--geld); font-size: .92rem; }
 .preis.zu-teuer { color: #b45b4b; }
+.ware.gratis { position: relative; }
+.ware.gratis .zettel { box-shadow: 0 0 0 2px var(--gold-h), 0 0 22px rgba(236, 210, 127, .45); }
+.ware.gratis .preis { color: var(--gold-h); text-transform: uppercase; letter-spacing: .08em; }
+.gratis-band {
+  position: absolute; top: -8px; left: 50%; transform: translateX(-50%) rotate(-4deg); z-index: 2; white-space: nowrap;
+  background: linear-gradient(165deg, #f3e3b0, #d9b862); color: #7a2030; border: 1px dashed #8c6f2a; border-radius: 6px;
+  font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 1px 8px; box-shadow: 0 2px 6px rgba(0, 0, 0, .45);
+}
 .foyer-knoepfe { display: grid; grid-template-columns: 1fr 1.3fr; gap: 10px; margin-top: auto; }
 .foyer-knoepfe .btn { flex-direction: column; gap: 0; line-height: 1.2; }
 
