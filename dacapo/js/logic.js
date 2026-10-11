@@ -6,8 +6,9 @@
 import {
   WERK, WERKE, KOMPONISTEN, SCHUL_IDS, epocheVon, PROGRAMME, PROGRAMM_IDS, STERNSTUNDEN,
   STARS, STAR, PROBEN, PROBE, INVESTITIONEN, INVESTITION, KRITIKER, FINAL_KRITIKER,
-  HAEUSER, GASTSPIELE, ZIELE, ABENDE, REPERTOIRE, REZENSIONEN, FESTSPIELHAUS,
+  HAEUSER, GASTSPIELE, ZIELE, ABENDE, REPERTOIRE, REZENSIONEN, FESTSPIELHAUS, GUTSCHEINE, GUTSCHEIN,
 } from './data.js';
+import { EREIGNISSE, EREIGNIS } from './ereignisse.js';
 
 export const VERSION = 1;
 export const STATIONEN = 8;
@@ -77,12 +78,14 @@ export function neuerLauf({ deck = 'leipzig', strenge = 1, seed = (Math.random()
     haende: 4,
     umbes: 3 + (def.bonus?.discards || 0) - (strenge >= 4 ? 1 : 0),
     investitionen: [], foyerPlaetze: 2, bau: 0,
-    kritiker: {}, kritikerGehabt: [], investAngebot: {},
+    kritiker: {}, kritikerGehabt: [], investAngebot: {}, gutscheinAngebot: {},
+    stationMod: null, abendMod: null, foyerMod: null, bauRabatt: 1,
+    ereignis: null, ereignisseGehabt: [],
     sortierung: 'komponist',
     round: null, shop: null, pack: null, bravo: null,
     stats: {
       besteVorstellung: 0, besteArt: null, besteWerke: [], vorstellungen: 0,
-      sternstunden: {}, komponisten: {}, verdient: 0, abende: 0, gestrichen: 0,
+      sternstunden: {}, komponisten: {}, verdient: 0, abende: 0, gestrichen: 0, abgesagt: 0,
       ende: null,
     },
   };
@@ -91,6 +94,21 @@ export function neuerLauf({ deck = 'leipzig', strenge = 1, seed = (Math.random()
   for (const w of ids) run.repertoire.push(neueKarte(run, w));
   if (def.star) run.stars.push({ id: def.star, v: 0 });
   kritikerWaehlen(run);
+  return run;
+}
+
+/** Ergänzt Spielstände aus älteren Fassungen um die neuen Felder. */
+export function migrieren(run) {
+  run.bau ??= 0;
+  run.gutscheinAngebot ??= {};
+  run.stationMod ??= null;
+  run.abendMod ??= null;
+  run.foyerMod ??= null;
+  run.bauRabatt ??= 1;
+  run.ereignis ??= null;
+  run.ereignisseGehabt ??= [];
+  run.stats.abgesagt ??= 0;
+  if (!run.gutscheinAngebot[run.station]) gutscheineWuerfeln(run);
   return run;
 }
 
@@ -120,6 +138,14 @@ function kritikerWaehlen(run) {
     const pool = INVESTITIONEN.filter((v) => !run.investitionen.includes(v.id));
     run.investAngebot[st] = pool.length ? pick(run, pool).id : null;
   }
+  if (!run.gutscheinAngebot[st]) gutscheineWuerfeln(run);
+}
+
+// Je ein Gutschein für Premiere und Gala, verschieden.
+function gutscheineWuerfeln(run) {
+  const finale = run.station % STATIONEN === 0;
+  const pool = mischen(run, GUTSCHEINE.filter((g) => !(finale && g.keinFinale)).map((g) => g.id));
+  run.gutscheinAngebot[run.station] = pool.slice(0, 2);
 }
 
 // Eine Regel, die den Großteil des Repertoires entwertet, macht den Abend
@@ -155,6 +181,48 @@ export function kritikerReparieren(run) {
   return neu;
 }
 
+// ------------------------------------------------------------------ Modifikatoren
+
+// stationMod gilt bis zum Ende der Station, abendMod nur für den nächsten
+// Abend, foyerMod nur für das nächste Foyer.
+export function modStation(run, station = run.station) {
+  const m = run.stationMod;
+  return m && m.station === station ? m : {};
+}
+function stationModSetzen(run, neu) {
+  const m = { ...modStation(run), station: run.station };
+  for (const [k, v] of Object.entries(neu)) m[k] = typeof v === 'number' && k !== 'kritikerZiel' && k !== 'kritikerGage' ? (m[k] || 0) + v : v;
+  run.stationMod = m;
+}
+function abendModSetzen(run, neu) {
+  const m = { ...(run.abendMod || {}) };
+  for (const [k, v] of Object.entries(neu)) m[k] = (m[k] || 0) + v;
+  run.abendMod = m;
+}
+function foyerModSetzen(run, neu) {
+  run.foyerMod = { ...(run.foyerMod || {}), ...neu };
+}
+
+/** Was gerade für die Station und den nächsten Abend gilt – für die Anzeige. */
+export function aktiveModifikatoren(run) {
+  const m = modStation(run);
+  const a = run.abendMod || {};
+  const f = run.foyerMod || {};
+  const zahl = (n, eins, viele) => `${n > 0 ? '+' : '−'}${Math.abs(n)} ${Math.abs(n) === 1 ? eins : viele}`;
+  const out = [];
+  if (m.haende) out.push(`Diese Station: ${zahl(m.haende, 'Vorstellung', 'Vorstellungen')} pro Abend`);
+  if (m.umbes) out.push(`Diese Station: ${zahl(m.umbes, 'Umbesetzung', 'Umbesetzungen')} pro Abend`);
+  if (m.hand) out.push(`Diese Station: ${zahl(m.hand, 'Handgröße', 'Handgröße')}`);
+  if (m.kritikerFrei) out.push('Kritikerabend dieser Station ohne Regel');
+  if (m.kritikerZiel) out.push(`Kritikerabend: Ziel +${Math.round((m.kritikerZiel - 1) * 100)} %, Gage ×${m.kritikerGage}`);
+  if (a.haende) out.push(`Nächster Abend: ${zahl(a.haende, 'Vorstellung', 'Vorstellungen')}`);
+  if (a.umbes) out.push(`Nächster Abend: ${zahl(a.umbes, 'Umbesetzung', 'Umbesetzungen')}`);
+  if (f.paketGratis) out.push('Nächstes Foyer: ein Paket gratis');
+  if (f.talent) out.push('Nächstes Foyer: ein Solist oder eine Legende mehr');
+  if (run.bauRabatt < 1) out.push('Nächster Bauabschnitt zum halben Preis');
+  return out;
+}
+
 export function kritikerVon(run, station = run.station) {
   return run.kritiker[station] || null;
 }
@@ -162,6 +230,7 @@ export function kritikerVon(run, station = run.station) {
 export function kritikerAktiv(run, abend = run.abend) {
   if (abend !== 2) return null;
   if (hatStar(run, 'hustenbonbon')) return null;
+  if (modStation(run).kritikerFrei) return null;
   return kritikerVon(run);
 }
 
@@ -178,25 +247,28 @@ export function ziel(run, station = run.station, abend = run.abend) {
   if (run.strenge >= 5) basis *= 1.6;
   else if (run.strenge >= 3) basis *= 1.25;
   let f = ABENDE[abend].faktor;
-  const k = kritikerAktiv(run, abend);
+  if (abend === 2) f *= modStation(run, station).kritikerZiel || 1;
+  const k = station === run.station ? kritikerAktiv(run, abend) : null;
   if (k === 'schlaefer') f = 1;
   if (k === 'gruenerhuegel') f = 4;
   return rund(basis * f);
 }
 
 export function handGroesse(run) {
-  let n = run.handSize;
+  let n = run.handSize + (modStation(run).hand || 0);
   if (hatStar(run, 'inspizient')) n += 1;
   if (run.round?.kritiker === 'kurzsichtig') n -= 1;
   return n;
 }
 function vorstellungenProAbend(run, k) {
-  if (k === 'schlaefer') return 1;
-  return run.haende + (hatStar(run, 'opernglas') ? 1 : 0);
+  const mod = (modStation(run).haende || 0) + (run.abendMod?.haende || 0);
+  if (k === 'schlaefer') return Math.max(1, 1 + Math.max(0, mod));
+  return Math.max(1, run.haende + (hatStar(run, 'opernglas') ? 1 : 0) + mod);
 }
 function umbesetzungenProAbend(run, k) {
   if (k === 'ungeduld') return 0;
-  return Math.max(0, run.umbes + (hatStar(run, 'pausensekt') ? 1 : 0));
+  const mod = (modStation(run).umbes || 0) + (run.abendMod?.umbes || 0);
+  return Math.max(0, run.umbes + (hatStar(run, 'pausensekt') ? 1 : 0) + mod);
 }
 
 // ------------------------------------------------------------------ Abend
@@ -214,6 +286,7 @@ export function starteAbend(run) {
   };
   run.round.haende = vorstellungenProAbend(run, k);
   run.round.umbes = umbesetzungenProAbend(run, k);
+  run.abendMod = null;
   if (k === 'primadonna') primadonnaWuerfeln(run);
   run.phase = 'abend';
   run.bravo = null;
@@ -456,6 +529,7 @@ const KARTEN_FX = {
   },
   raritaeten: (c) => ruhm(c) <= 6 && { x: 1.5 },
   orakel: (c, s, run) => schule(c) === run.round.orakel && { x: 1.5 },
+  neuemusik: (c) => werkVon(c).y >= 1900 && { x: 1.25 },
   callas: (c) => schule(c) === 'it' && { x: 1.3 },
   cosima: (c) => komp(c) === 'wagner' && { x: 1.5 },
 };
@@ -480,7 +554,34 @@ const HAND_FX = {
   karajan: (ctx) => ctx.letzte && { x: 3 },
   kino: () => ({ px: 2 }),
   intendant: (ctx, s) => s.v > 0 && { x: 1 + s.v },
+  chordirektor: (ctx) => {
+    const rest = ctx.run.round.hand.length - ctx.cards.length;
+    return rest > 0 && { b: 2 * rest };
+  },
+  archivarin: (ctx) => ({ p: 3 * ctx.run.repertoire.length }),
+  schallplatten: (ctx) => {
+    const n = ctx.run.repertoire.filter((c) => c.enh).length;
+    return n > 0 && { b: 3 * n };
+  },
+  bauherr: (ctx) => bauStand(ctx.run) > 0 && { b: 6 * bauStand(ctx.run) },
+  abendregie: (ctx) => !ctx.run.round.arten.includes(ctx.ev.art) && { x: 1.5 },
+  ausfall: (ctx) => ctx.run.stats.abgesagt > 0 && { x: 1 + 0.25 * ctx.run.stats.abgesagt },
 };
+
+// Wessen Wirkung spielt der Star an Position i? Die Zweitbesetzung spielt die
+// ihres rechten Nachbarn – mit einer Kopie des Zustands, damit wachsende Stars
+// nicht doppelt wachsen.
+function wirkungVon(stars, i) {
+  let j = i;
+  while (stars[j]?.id === 'zweitbesetzung') j++;
+  if (!stars[j]) return null;
+  return j === i ? { id: stars[i].id, s: stars[i], kopie: false } : { id: stars[j].id, s: { ...stars[j] }, kopie: true };
+}
+/** Für die Anzeige: Wen kopiert die Zweitbesetzung an Position i gerade, und wirkt das überhaupt? */
+export function zweitbesetzungZiel(run, i) {
+  const w = wirkungVon(run.stars, i);
+  return w?.kopie ? { id: w.id, kopierbar: !!(KARTEN_FX[w.id] || HAND_FX[w.id]) } : null;
+}
 
 /**
  * Spielt die gewählten Werke. Gibt die Schritte für die Animation zurück und
@@ -544,16 +645,20 @@ export function auffuehren(run, uidsGewaehlt) {
       if (c.enh === 'gold') { geld += 2; S({ t: 'g', v: 2, uid: c.uid }); }
       stars.forEach((s, i) => {
         if (i === off) return;
-        const f = KARTEN_FX[s.id];
-        if (f) wende(f(c, s, run), { i, uid: c.uid });
+        const w = wirkungVon(stars, i);
+        const f = w && KARTEN_FX[w.id];
+        if (!f) return;
+        const fx = f(c, w.s, run);
+        wende(w.kopie && fx ? { ...fx, wachs: null } : fx, { i, uid: c.uid });
       });
     }
   });
 
   stars.forEach((s, i) => {
     if (nichtig || i === off) return;
-    const f = HAND_FX[s.id];
-    if (f) wende(f(ctx, s), { i });
+    const w = wirkungVon(stars, i);
+    const f = w && HAND_FX[w.id];
+    if (f) wende(f(ctx, w.s), { i });
   });
 
   const stern = nichtig ? [] : sternstundenIn(cards);
@@ -641,7 +746,8 @@ function abendGewonnen(run) {
   const zeilen = [];
   const ereignisse = [];
   const a = ABENDE[run.abend];
-  const gage = run.strenge >= 2 && run.abend === 0 ? 0 : a.gage;
+  let gage = run.strenge >= 2 && run.abend === 0 ? 0 : a.gage;
+  if (run.abend === 2) gage *= modStation(run).kritikerGage || 1;
   zeilen.push({ text: `Gage ${a.name}`, v: gage });
   if (r.haende > 0) zeilen.push({ text: `${r.haende} übrige ${r.haende === 1 ? 'Vorstellung' : 'Vorstellungen'}`, v: r.haende });
   for (const s of run.stars) {
@@ -696,29 +802,32 @@ export function foyerVerlassen(run) {
   if (run.phase !== 'shop') return;
   run.shop = null;
   run.abend += 1;
-  if (run.abend > 2) {
+  const neueStation = run.abend > 2;
+  if (neueStation) {
     run.abend = 0;
     run.station += 1;
   }
   kritikerWaehlen(run);
   run.phase = 'spielplan';
+  if (neueStation) ereignisZiehen(run);
 }
 
 // ------------------------------------------------------------------ Foyer
 
 function rezPreis(run) { return hatInvest(run, 'pressestelle') ? 1 : 3; }
 
-function zufallsStar(run, ausschluss, maxRar = 3) {
+function zufallsStar(run, ausschluss, maxRar = 3, minRar = 1) {
   const besitz = new Set([...run.stars.map((s) => s.id), ...ausschluss]);
   const roll = rnd(run);
   let rar = roll < 0.68 ? 1 : roll < 0.95 ? 2 : 3;
-  rar = Math.min(rar, maxRar);
-  for (let versuch = 0; versuch < 3; versuch++) {
-    const pool = STARS.filter((s) => s.rar === rar && !besitz.has(s.id));
+  rar = Math.max(minRar, Math.min(rar, maxRar));
+  const frei = (r) => STARS.filter((s) => s.rar === r && !besitz.has(s.id));
+  for (const r of [rar, rar === 1 ? 2 : 1, 3]) {
+    if (r < minRar || r > maxRar) continue;
+    const pool = frei(r);
     if (pool.length) return pick(run, pool).id;
-    rar = rar === 1 ? 2 : 1;
   }
-  const rest = STARS.filter((s) => !besitz.has(s.id));
+  const rest = STARS.filter((s) => !besitz.has(s.id) && s.rar >= minRar && s.rar <= maxRar);
   return rest.length ? pick(run, rest).id : null;
 }
 
@@ -779,11 +888,15 @@ export function oeffneFoyer(run) {
   const aus = [];
   const angebote = [];
   for (let i = 0; i < run.foyerPlaetze; i++) angebote.push(angebot(run, aus));
-  run.shop = {
-    angebote,
-    pakete: [paket(run), paket(run)],
-    reroll: rerollBasis(run),
-  };
+  const fm = run.foyerMod || {};
+  if (fm.talent) {
+    const id = zufallsStar(run, aus, 3, 2);
+    if (id) { aus.push(id); angebote.push({ art: 'star', id, preis: STAR[id].preis }); }
+  }
+  const pakete = [paket(run), paket(run)];
+  if (fm.paketGratis) pakete[0].preis = 0;
+  run.foyerMod = null;
+  run.shop = { angebote, pakete, reroll: rerollBasis(run) };
   run.phase = 'shop';
 }
 
@@ -842,7 +955,7 @@ export function investieren(run) {
 // Ältere Spielstände kennen das Festspielhaus noch nicht.
 export const bauStand = (run) => run.bau || 0;
 export const hausFaktor = (run, n = bauStand(run)) => FESTSPIELHAUS.faktor ** n;
-export const bauPreis = (run, n = bauStand(run)) => FESTSPIELHAUS.preis * 2 ** n;
+export const bauPreis = (run, n = bauStand(run)) => Math.ceil(FESTSPIELHAUS.preis * 2 ** n * (n === bauStand(run) ? run.bauRabatt || 1 : 1));
 
 /** Name und Text des Bauabschnitts n (ab 0). Nach dem Königsbau wird nur noch ausgebaut. */
 export function bauabschnitt(n) {
@@ -857,7 +970,114 @@ export function bauen(run) {
   if (run.geld < preis) return 'Zu wenig Dukaten.';
   run.geld -= preis;
   run.bau = bauStand(run) + 1;
+  run.bauRabatt = 1;
   return null;
+}
+
+// ------------------------------------------------------------------ Absagen und Gutscheine
+
+export const gutscheinFuer = (run, abend = run.abend) => (abend < 2 ? run.gutscheinAngebot[run.station]?.[abend] || null : null);
+
+/**
+ * Sagt den anstehenden Abend ab: keine Gage, kein Foyer, dafür der Gutschein.
+ * Gibt { text } zurück oder { fehler }. Öffnet der Gutschein ein Paket, steht
+ * danach run.phase auf 'pack'.
+ */
+export function absagen(run) {
+  if (run.phase !== 'spielplan') return { fehler: 'Nur vor dem Abend.' };
+  const id = gutscheinFuer(run);
+  if (!id) return { fehler: 'Der Kritikerabend lässt sich nicht absagen.' };
+  run.abend += 1;
+  run.stats.abgesagt += 1;
+  return { text: gutscheinEinloesen(run, id) };
+}
+
+function gutscheinEinloesen(run, id) {
+  const paketAuf = (art, veredelt) => { run.pack = { art, auswahl: paketInhalt(run, art, veredelt), zurueck: 'spielplan', gutschein: id }; run.phase = 'pack'; };
+  switch (id) {
+    case 'freikarten': foyerModSetzen(run, { paketGratis: true }); return 'Im nächsten Foyer ist ein Paket gratis.';
+    case 'talentscout': foyerModSetzen(run, { talent: true }); return 'Der Talentscout ist unterwegs.';
+    case 'heft': paketAuf('heft', 1); return 'Das Spielzeitheft liegt bereit.';
+    case 'mappe': paketAuf('mappe'); return 'Die Probenmappe liegt bereit.';
+    case 'agentur': paketAuf('agentur'); return 'Die Agentur schickt zwei Namen.';
+    case 'pressekonferenz': {
+      const art = [...PROGRAMM_IDS].sort((a, b) => run.gespielt[b] - run.gespielt[a] || PROGRAMM_IDS.indexOf(a) - PROGRAMM_IDS.indexOf(b))[0];
+      const ziel = run.gespielt[art] > 0 ? art : 'doppel';
+      run.stufen[ziel] += 2;
+      return `${PROGRAMME[ziel].name} steigt auf Stufe ${run.stufen[ziel]}.`;
+    }
+    case 'zuschuss': run.geld += 12; return 'Zwölf Dukaten vom Kulturamt.';
+    case 'denkmal': run.bauRabatt = 0.5; return 'Der nächste Bauabschnitt kostet die Hälfte.';
+    case 'ausgeruht': abendModSetzen(run, { haende: 1, umbes: 1 }); return 'Das Ensemble ist ausgeschlafen.';
+    case 'urauffuehrung': {
+      const c = neueKarte(run, pick(run, WERKE).id, 'xmult');
+      run.repertoire.push(c);
+      return `${WERK[c.w].t} kommt als Festspielfassung ins Repertoire.`;
+    }
+    case 'pressefreund': stationModSetzen(run, { kritikerFrei: true }); return 'Das Feuilleton ist besänftigt.';
+    default: return '';
+  }
+}
+
+// ------------------------------------------------------------------ Ereignisse
+
+const WERKZEUG = {
+  rnd, pick, mischen, zufallsStar, hatStar, komp, schule, kritikerAktiv,
+  titel: (c) => WERK[c.w].t,
+  istFinale: (run) => run.station % STATIONEN === 0,
+  neuesWerk: (run, w, enh = null) => { const c = neueKarte(run, w, enh); run.repertoire.push(c); return c; },
+  zufallsKarten: (run, n) => {
+    const ohne = run.repertoire.filter((c) => !c.enh);
+    return mischen(run, [...(ohne.length >= n ? ohne : run.repertoire)]).slice(0, n);
+  },
+  starWeg: (run, id) => { const i = run.stars.findIndex((s) => s.id === id); if (i >= 0) run.stars.splice(i, 1); },
+  stufe: (run, art, n) => { run.stufen[art] += n; },
+  stationMod: stationModSetzen,
+  abendMod: abendModSetzen,
+};
+
+// Zu Beginn jeder neuen Station (außer der ersten) liegt Post auf dem Tisch.
+function ereignisZiehen(run) {
+  const moeglich = (e) => !e.moeglich || e.moeglich(run, WERKZEUG);
+  let pool = EREIGNISSE.filter((e) => !run.ereignisseGehabt.includes(e.id) && moeglich(e));
+  if (!pool.length) { run.ereignisseGehabt = []; pool = EREIGNISSE.filter(moeglich); }
+  if (!pool.length) return;
+  const e = pick(run, pool);
+  run.ereignisseGehabt.push(e.id);
+  run.ereignis = { id: e.id, d: e.vorbereiten ? e.vorbereiten(run, WERKZEUG) : {} };
+  run.phase = 'ereignis';
+}
+
+const aufloesen = (x, run, d) => (typeof x === 'function' ? x(run, d) : x);
+
+/** Das aktuelle Ereignis, fertig für die Anzeige. */
+export function ereignisAnsicht(run) {
+  const er = run.ereignis;
+  const e = er && EREIGNIS[er.id];
+  if (!e) return null;
+  const optionen = e.optionen.map((o) => {
+    const kosten = aufloesen(o.kosten, run, er.d) || 0;
+    const grund = (o.grund && o.grund(run, WERKZEUG, er.d)) || (run.geld < kosten ? 'Zu wenig Dukaten.' : null);
+    return { text: aufloesen(o.text, run, er.d), wirkung: aufloesen(o.wirkung, run, er.d), kosten, grund };
+  });
+  // Geht gar nichts, darf man immer noch abwarten – sonst säße man fest.
+  if (optionen.every((o) => o.grund)) optionen.push({ text: 'Abwarten', wirkung: 'Nichts passiert.', kosten: 0, grund: null, notausgang: true });
+  return { id: e.id, titel: e.titel, text: aufloesen(e.text, run, er.d), optionen };
+}
+
+/** Wählt eine Antwort. Gibt { text } oder { fehler } zurück. */
+export function ereignisWaehlen(run, idx) {
+  if (run.phase !== 'ereignis') return { fehler: 'Kein Ereignis offen.' };
+  const ansicht = ereignisAnsicht(run);
+  const o = ansicht?.optionen[idx];
+  if (!o) return { fehler: 'Ungültig.' };
+  if (o.grund) return { fehler: o.grund };
+  const e = EREIGNIS[run.ereignis.id];
+  run.geld -= o.kosten;
+  const text = o.notausgang ? 'Man wartet ab.' : e.optionen[idx].tun(run, WERKZEUG, run.ereignis.d);
+  run.ereignis = null;
+  run.phase = 'spielplan';
+  return { text };
 }
 
 export function paketOeffnen(run, idx) {
@@ -866,13 +1086,19 @@ export function paketOeffnen(run, idx) {
   if (run.geld < p.preis) return 'Zu wenig Dukaten.';
   run.geld -= p.preis;
   p.gekauft = true;
+  run.pack = { art: p.art, auswahl: paketInhalt(run, p.art) };
+  run.phase = 'pack';
+  return null;
+}
+
+function paketInhalt(run, art, veredelt = 0.3) {
   let auswahl = [];
-  if (p.art === 'heft') {
-    for (let i = 0; i < 3; i++) auswahl.push({ art: 'werk', id: zufallsWerk(run), enh: zufallsVeredelung(run, 0.3) });
-  } else if (p.art === 'feuilleton') {
+  if (art === 'heft') {
+    for (let i = 0; i < 3; i++) auswahl.push({ art: 'werk', id: zufallsWerk(run), enh: veredelt >= 1 ? ENH_PAKET[rint(run, ENH_PAKET.length)] : zufallsVeredelung(run, veredelt) });
+  } else if (art === 'feuilleton') {
     const pool = mischen(run, PROGRAMM_IDS.filter((a) => (a !== 'gesamtwerk' && a !== 'grosseZeit') || run.gespielt[a] > 0));
     auswahl = pool.slice(0, 3).map((id) => ({ art: 'rez', id }));
-  } else if (p.art === 'mappe') {
+  } else if (art === 'mappe') {
     auswahl = mischen(run, PROBEN.map((x) => x.id)).slice(0, 3).map((id) => ({ art: 'probe', id }));
   } else {
     const aus = [];
@@ -881,10 +1107,9 @@ export function paketOeffnen(run, idx) {
       if (id) { aus.push(id); auswahl.push({ art: 'star', id }); }
     }
   }
-  run.pack = { art: p.art, auswahl };
-  run.phase = 'pack';
-  return null;
+  return auswahl;
 }
+const ENH_PAKET = ['bonus', 'mult', 'mult', 'gold', 'xmult'];
 
 export function paketWaehlen(run, idx) {
   const pk = run.pack;
@@ -899,8 +1124,8 @@ export function paketWaehlen(run, idx) {
     if (a.art === 'probe') run.proben.push(a.id);
     if (a.art === 'star') run.stars.push({ id: a.id, v: 0 });
   }
+  run.phase = pk.zurueck || 'shop';
   run.pack = null;
-  run.phase = 'shop';
   return null;
 }
 

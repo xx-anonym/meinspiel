@@ -276,6 +276,8 @@ export const STARS = [
   { id: 'garderobiere', name: 'Die Garderobiere', rar: 1, preis: 4, icon: 'coin', text: '{g:+1 Dukat} je übrig gebliebener Umbesetzung am Abendende.' },
   { id: 'pausensekt', name: 'Pausensekt', rar: 1, preis: 4, icon: 'glass', text: '+1 Umbesetzung pro Abend.' },
   { id: 'inspizient', name: 'Der Inspizient', rar: 1, preis: 5, icon: 'headset', text: '+1 Handgröße.' },
+  { id: 'chordirektor', name: 'Der Chordirektor', rar: 1, preis: 5, icon: 'baton', text: '{b:+2 Begeisterung} für jedes Werk, das bei der Vorstellung in der Hand bleibt.', flavor: 'Wer nicht singt, summt mit.' },
+  { id: 'archivarin', name: 'Die Archivarin', rar: 1, preis: 4, icon: 'book', text: '{p:+3 Publikum} für jedes Werk im Repertoire.', wert: (v, run) => (run ? `Derzeit {p:+${3 * run.repertoire.length} Publikum}.` : '') },
 
   { id: 'daponte', name: 'Lorenzo Da Ponte', rar: 2, preis: 6, icon: 'quill', text: 'Jedes gezählte Mozart-Werk: {p:+30 Publikum} und {b:+3 Begeisterung}.' },
   { id: 'boito', name: 'Arrigo Boito', rar: 2, preis: 6, icon: 'quill', text: 'Jedes gezählte Verdi-Werk: {b:+5 Begeisterung}.' },
@@ -296,6 +298,11 @@ export const STARS = [
   { id: 'ausschuss', name: 'Der Kulturausschuss', rar: 2, preis: 6, icon: 'gavel', text: '{g:+10 Dukaten} Fördermittel nach jedem Kritikerabend.' },
   { id: 'pavarotti', name: 'Nessun dorma', rar: 2, preis: 6, icon: 'note', text: 'Wird genau ein Werk gespielt: {x:×4 Begeisterung}.' },
   { id: 'generalprobe', name: 'Die Generalprobe', rar: 2, preis: 6, icon: 'clock', text: 'In der ersten Vorstellung eines Abends: {x:×2 Begeisterung}.' },
+  { id: 'abendregie', name: 'Die Abend\u00adspielleiterin', rar: 2, preis: 6, icon: 'liste', text: 'Ein Programm, das an diesem Abend zum ersten Mal gespielt wird: {x:×1,5 Begeisterung}.', flavor: 'Bloß keine Wiederholung.' },
+  { id: 'neuemusik', name: 'Neue Musik', rar: 2, preis: 6, icon: 'blitz', text: 'Jedes gezählte Werk ab 1900: {x:×1,25 Begeisterung}.', flavor: 'Das Publikum gewöhnt sich daran. Irgendwann.' },
+  { id: 'schallplatten', name: 'Der Platten\u00adsammler', rar: 2, preis: 6, icon: 'disc', text: '{b:+3 Begeisterung} für jedes veredelte Werk im Repertoire.', wert: (v, run) => (run ? `Derzeit {b:+${3 * run.repertoire.filter((c) => c.enh).length} Begeisterung}.` : '') },
+  { id: 'bauherr', name: 'Der Bauherr', rar: 2, preis: 6, icon: 'haus', text: '{b:+6 Begeisterung} je Bauabschnitt des Festspielhauses.', wert: (v, run) => (run ? `Derzeit {b:+${6 * (run.bau || 0)} Begeisterung}.` : '') },
+  { id: 'ausfall', name: 'Die Ausfall\u00adversicherung', rar: 2, preis: 6, icon: 'ticket', text: '{x:×0,25 Begeisterung} mehr für jeden abgesagten Abend dieser Spielzeit.', wert: (v, run) => (run ? `Derzeit {x:×${fmtX(1 + 0.25 * (run.stats?.abgesagt || 0))} Begeisterung}.` : '') },
 
   { id: 'callas', name: 'Maria Callas', rar: 3, preis: 9, icon: 'diva', text: 'Jedes gezählte italienische Werk: {x:×1,3 Begeisterung}.', flavor: 'La Divina.' },
   { id: 'cosima', name: 'Cosima Wagner', rar: 3, preis: 9, icon: 'crown', text: 'Jedes gezählte Wagner-Werk: {x:×1,5 Begeisterung}.' },
@@ -305,6 +312,7 @@ export const STARS = [
   { id: 'intendant', name: 'Der Generalintendant', rar: 3, preis: 8, icon: 'laurel', text: 'Wächst nach jedem bestandenen Kritikerabend um {x:×0,5 Begeisterung}.', wert: (v) => `Derzeit {x:×${fmtX(1 + (v || 0))} Begeisterung}.` },
   { id: 'opernfuehrer', name: 'Reclams Opernführer', rar: 3, preis: 8, icon: 'book', text: 'Sternstunden zählen zusätzlich {x:×2}. Fehlende Werke deiner Sternstunden tauchen öfter im Foyer auf.' },
   { id: 'hustenbonbon', name: 'Hustenbonbons', rar: 3, preis: 8, icon: 'candy', text: 'Die Regeln der Kritiker gelten nicht.' },
+  { id: 'zweitbesetzung', name: 'Die Zweitbesetzung', rar: 3, preis: 9, icon: 'zwei', text: 'Kopiert die Wirkung des Stars rechts daneben auf Publikum, Begeisterung und Dukaten – auch wenn er indisponiert ist.', flavor: 'Hat alles gelernt und wartet auf ihren Abend.' },
 ];
 // Kurznamen für schmale Karten (Handy).
 const STAR_KURZ = {
@@ -318,6 +326,8 @@ const STAR_KURZ = {
   fraktion: 'Fraktion', regietheater: 'Regie\u00adtheater', prisma: 'Prisma', opernglas: 'Opern\u00adglas', ausschuss: 'Aus\u00adschuss',
   pavarotti: 'Nessun dorma', generalprobe: 'General\u00adprobe', callas: 'Callas', cosima: 'Cosima', toscanini: 'Toscanini',
   karajan: 'Karajan', kino: 'Kino', intendant: 'Intendant', opernfuehrer: 'Reclam', hustenbonbon: 'Bonbons',
+  chordirektor: 'Chor\u00addirektor', archivarin: 'Archi\u00advarin', abendregie: 'Abend\u00adregie', neuemusik: 'Neue Musik',
+  schallplatten: 'Platten', bauherr: 'Bauherr', ausfall: 'Ausfall', zweitbesetzung: 'Zweit\u00adbesetzung',
 };
 for (const s of STARS) s.kurz = STAR_KURZ[s.id] || s.name;
 export const STAR = Object.fromEntries(STARS.map((s) => [s.id, s]));
@@ -403,6 +413,23 @@ export const FESTSPIELHAUS = {
   ],
 };
 
+// Gutscheine: Wer die Premiere oder die Gala absagt, verzichtet auf Gage und
+// Foyer und bekommt stattdessen einen davon (die „Tags“).
+export const GUTSCHEINE = [
+  { id: 'freikarten', name: 'Freikarten', text: 'Im nächsten Foyer ist das erste Paket gratis.' },
+  { id: 'talentscout', name: 'Talentscout', text: 'Im nächsten Foyer steht zusätzlich ein Solist oder eine Legende.' },
+  { id: 'heft', name: 'Spielzeitheft', text: 'Sofort: Wähle eins von drei Werken – alle veredelt.' },
+  { id: 'mappe', name: 'Probenmappe', text: 'Sofort: Wähle eine von drei Proben.' },
+  { id: 'agentur', name: 'Künstleragentur', text: 'Sofort: Wähle einen von zwei Stars.' },
+  { id: 'pressekonferenz', name: 'Pressekonferenz', text: 'Dein meistgespieltes Programm steigt um zwei Stufen.' },
+  { id: 'zuschuss', name: 'Kulturzuschuss', text: '{g:+12 Dukaten}.' },
+  { id: 'denkmal', name: 'Denkmalschutz', text: 'Der nächste Bauabschnitt des Festspielhauses kostet die Hälfte.' },
+  { id: 'ausgeruht', name: 'Ausgeruhtes Ensemble', text: 'Am nächsten Abend: +1 Vorstellung und +1 Umbesetzung.' },
+  { id: 'urauffuehrung', name: 'Uraufführung', text: 'Ein zufälliges Werk kommt als Festspielfassung ({x:×1,5 Begeisterung}) ins Repertoire.' },
+  { id: 'pressefreund', name: 'Freund im Feuilleton', text: 'Am Kritikerabend dieser Station gilt die Regel des Kritikers nicht.', keinFinale: true },
+];
+export const GUTSCHEIN = Object.fromEntries(GUTSCHEINE.map((g) => [g.id, g]));
+
 // Kritiker: die Herrschaften am dritten Abend jeder Station.
 export const KRITIKER = [
   { id: 'purist', name: 'Der Purist', regel: 'Werke nach 1900 zählen nicht.' },
@@ -453,7 +480,7 @@ export const ZIELE = [300, 800, 1800, 4200, 9000, 17000, 30000, 48000];
 export const ABENDE = [
   { name: 'Premiere', faktor: 1, gage: 3 },
   { name: 'Gala', faktor: 1.5, gage: 4 },
-  { name: 'Kritikerabend', faktor: 2, gage: 5 },
+  { name: 'Kritiker\u00adabend', faktor: 2, gage: 5 },
 ];
 
 // Startrepertoires (die „Decks“).

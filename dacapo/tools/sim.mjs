@@ -94,6 +94,13 @@ function botFoyer(run, mitStars) {
   L.foyerVerlassen(run);
 }
 
+// Post für die Intendanz: die erste Antwort, die geht.
+function botEreignis(run) {
+  const e = L.ereignisAnsicht(run);
+  const i = e.optionen.findIndex((o) => !o.grund);
+  L.ereignisWaehlen(run, i < 0 ? e.optionen.length - 1 : i);
+}
+
 for (const mitStars of N ? [false, true] : []) {
   const erreicht = {};
   const t0 = Date.now();
@@ -104,6 +111,7 @@ for (const mitStars of N ? [false, true] : []) {
       if (run.phase === 'spielplan') botAbend(run);
       else if (run.phase === 'bravo') L.kassieren(run);
       else if (run.phase === 'shop') botFoyer(run, mitStars);
+      else if (run.phase === 'ereignis') botEreignis(run);
       else break;
       if (run.station > 12) break;
     }

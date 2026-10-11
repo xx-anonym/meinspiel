@@ -1,8 +1,8 @@
 // Da capo! – Service Worker: erst das Netz, bei Funkstille der Cache.
 // So kommen Updates sofort an, und im Zug ohne Netz läuft das Spiel trotzdem.
-const CACHE = 'dacapo-v1';
+const CACHE = 'dacapo-v2';
 const SHELL = ['./', 'index.html', 'style.css', 'icon.svg', 'manifest.webmanifest',
-  'js/main.js', 'js/logic.js', 'js/data.js', 'js/audio.js', 'js/fx.js', 'js/icons.js', 'js/speicher.js'];
+  'js/main.js', 'js/logic.js', 'js/data.js', 'js/audio.js', 'js/fx.js', 'js/icons.js', 'js/speicher.js', 'js/ereignisse.js'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

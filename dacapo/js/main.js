@@ -7,7 +7,7 @@ import { icon } from './icons.js';
 import {
   WERK, WERKE, KOMPONISTEN, SCHULEN, EPOCHEN, epocheVon, PROGRAMME, PROGRAMM_IDS, STERNSTUNDEN,
   STARS, STAR, RARITAET, PROBE, VEREDELUNG, INVESTITION, KRITIK, HAEUSER, GASTSPIELE, ABENDE,
-  REPERTOIRES, REPERTOIRE, STRENGE, REZENSIONEN, FESTSPIELHAUS, fmtX,
+  REPERTOIRES, REPERTOIRE, STRENGE, REZENSIONEN, FESTSPIELHAUS, GUTSCHEIN, fmtX,
 } from './data.js';
 import {
   ladeLauf, speichereLauf, loescheLauf, ladeMeta, speichereMeta, ladeEinst, speichereEinst, pruefeFreischaltungen,
@@ -17,6 +17,7 @@ import {
 
 let run = ladeLauf();
 if (run && run.v !== L.VERSION) run = null;
+if (run) L.migrieren(run);
 const meta = ladeMeta();
 const einst = ladeEinst();
 let auswahl = new Set();
@@ -120,6 +121,8 @@ function starHTML(s, { i = null, klasse = '', unbekannt = false } = {}) {
   let wert = '';
   if (s.id === 'melchior' || s.id === 'stammpublikum') wert = s.v ? `+${s.v}` : '';
   if (s.id === 'intendant' && s.v) wert = `×${fmtX(1 + s.v)}`;
+  if (s.id === 'ausfall' && run?.stats?.abgesagt) wert = `×${fmtX(1 + 0.25 * run.stats.abgesagt)}`;
+  if (s.id === 'bauherr' && run?.bau) wert = `+${6 * run.bau}`;
   const aus = run?.round && run.round.offStar === i && i != null ? 'aus' : '';
   return `<div class="star r${d.rar} ${aus} ${klasse} ${unbekannt ? 'unbekannt' : ''}" ${i != null ? `data-star="${i}"` : ''} data-sid="${s.id}" title="${esc(unbekannt ? '???' : d.name)}">
     ${wert ? `<span class="s-wert">${wert}</span>` : ''}
@@ -149,6 +152,10 @@ function zettelHTML(art, id, extra = {}) {
   if (art === 'invest') {
     const v = INVESTITION[id];
     return `<div class="zettel invest">${icon('haus')}<div class="z-kopf">${v.name}</div><div class="z-text">${v.text}</div></div>`;
+  }
+  if (art === 'gutschein') {
+    const g = GUTSCHEIN[id];
+    return `<div class="zettel gutschein">${icon('ticket')}<div class="z-kopf">${g.name}</div><div class="z-art">Gutschein</div></div>`;
   }
   if (art === 'haus') {
     const n = L.bauStand(run);
@@ -279,7 +286,7 @@ function renderHud() {
   const h = L.haus(run.station);
   const r = run.round;
   // Im Foyer zeigt die Leiste schon den nächsten Abend.
-  const imFoyer = run.phase === 'shop' || run.phase === 'pack';
+  const imFoyer = run.phase === 'shop' || (run.phase === 'pack' && !run.pack?.zurueck);
   const naechster = imFoyer && run.abend === 2 ? null : imFoyer ? run.abend + 1 : run.abend;
   const abendIdx = naechster ?? 0;
   const abend = ABENDE[abendIdx];
@@ -332,6 +339,7 @@ function renderMitte() {
     case 'bravo': m.innerHTML = bravoHTML(); break;
     case 'shop': m.innerHTML = foyerHTML(); break;
     case 'pack': m.innerHTML = paketHTML(); break;
+    case 'ereignis': m.innerHTML = ereignisHTML(); break;
     default: m.innerHTML = '';
   }
 }
@@ -371,14 +379,24 @@ function spielplanHTML() {
   const kId = L.kritikerVon(run);
   const k = KRITIK[kId];
   const huste = L.hatStar(run, 'hustenbonbon');
+  const ohneRegel = !L.kritikerAktiv(run, 2);
+  const mods = L.aktiveModifikatoren(run);
   const abende = ABENDE.map((a, i) => {
     const status = i < run.abend ? 'fertig' : i === run.abend ? 'aktuell' : 'kommend';
-    const gage = run.strenge >= 2 && i === 0 ? 0 : a.gage;
+    let gage = run.strenge >= 2 && i === 0 ? 0 : a.gage;
+    if (i === 2) gage *= L.modStation(run).kritikerGage || 1;
+    const gId = i >= run.abend ? L.gutscheinFuer(run, i) : null;
+    const gutschein = gId
+      ? (i === run.abend
+        ? `<button class="sp-gutschein" data-akt="absagenInfo">${icon('ticket')}<span>Absagen für <b>${GUTSCHEIN[gId].name}</b></span></button>`
+        : `<span class="sp-gutschein-vorschau">${icon('ticket')} ${GUTSCHEIN[gId].name}</span>`)
+      : '';
     return `<div class="sp-abend ${status} ${i === 2 ? 'boss' : ''}">
       <span class="sp-name">${a.name}</span>
       <span class="sp-ziel">Ziel <b>${fmt(L.ziel(run, run.station, i))}</b></span>
       <span class="sp-gage">Gage ${muenze(gage)}</span>
-      ${i === 2 && k ? `<span class="sp-regel ${huste ? 'aus' : ''}"><b>${k.name}</b>${huste ? 'Dank Hustenbonbons ohne Regel.' : k.regel}</span>` : ''}
+      ${i === 2 && k ? `<span class="sp-regel ${ohneRegel ? 'aus' : ''}"><b>${k.name}</b>${ohneRegel ? (huste ? 'Dank Hustenbonbons ohne Regel.' : 'Das Feuilleton ist besänftigt: ohne Regel.') : k.regel}</span>` : ''}
+      ${gutschein}
     </div>`;
   }).join('');
   return `<div class="panel spielplan">
@@ -391,6 +409,7 @@ function spielplanHTML() {
       ${karteSVG()}
     </div>
     <div class="sp-abende">${abende}</div>
+    ${mods.length ? `<ul class="sp-mods">${mods.map((m) => `<li>${m}</li>`).join('')}</ul>` : ''}
     <div class="sp-fuss"><button class="btn btn-gold btn-gross" data-akt="vorhangAuf">Vorhang auf: ${ABENDE[run.abend].name}</button></div>
   </div>`;
 }
@@ -607,11 +626,32 @@ function paketHTML() {
     return `<div class="wahl">${inhalt}<span class="wahl-text">${text}</span><button class="btn btn-gold btn-klein" data-akt="paketWahl" data-i="${i}">Nehmen</button></div>`;
   }).join('');
   return `<div class="panel">
-    <span class="klein">Paket geöffnet</span>
+    <span class="klein">${pk.gutschein ? 'Gutschein eingelöst' : 'Paket geöffnet'}</span>
     <h2>${P.name}</h2>
     <p>${P.text}</p>
     <div class="wahl-reihe">${wahl}</div>
     <div style="display:flex;justify-content:center"><button class="btn" data-akt="paketSkip">Nichts davon</button></div>
+  </div>`;
+}
+
+// ---------- Post für die Intendanz
+
+function ereignisHTML() {
+  const e = L.ereignisAnsicht(run);
+  if (!e) return '';
+  const h = L.haus(run.station);
+  const optionen = e.optionen.map((o, i) => `<button class="er-option" data-akt="ereignisWahl" data-i="${i}" ${o.grund ? 'disabled' : ''}>
+      <span class="er-kopf"><b>${o.text}</b>${o.kosten ? `<span class="preis ${run.geld < o.kosten ? 'zu-teuer' : ''}">${muenze(o.kosten)}</span>` : ''}</span>
+      <span class="er-wirkung">${markup(o.wirkung)}</span>
+      ${o.grund ? `<span class="er-grund">${o.grund}</span>` : ''}
+    </button>`).join('');
+  return `<div class="panel ereignis-panel">
+    <div class="er-brief">
+      <span class="klein">${icon('brief')} Post für die Intendanz · ${h.stadt}</span>
+      <h2>${e.titel}</h2>
+      <p>${e.text}</p>
+    </div>
+    <div class="er-optionen">${optionen}</div>
   </div>`;
 }
 
@@ -1077,7 +1117,13 @@ function sheetZu() { $('#sheet').hidden = true; }
 function starSheet(i) {
   const s = run.stars[i];
   const d = STAR[s.id];
-  const wert = d.wert ? markup(d.wert(s.v, run)) : '';
+  let wert = d.wert ? markup(d.wert(s.v, run)) : '';
+  if (s.id === 'zweitbesetzung') {
+    const ziel = L.zweitbesetzungZiel(run, i);
+    wert = !ziel ? 'Rechts daneben steht niemand – sie wartet noch.'
+      : ziel.kopierbar ? `Spielt derzeit: <b>${STAR[ziel.id].name}</b>.`
+        : `Rechts steht ${STAR[ziel.id].name} – davon gibt es in der Vorstellung nichts zu kopieren.`;
+  }
   const aus = run.round && run.round.offStar === i;
   sheet(`<div class="sh-kopf">${starHTML(s)}<div><span class="klein">${RARITAET[d.rar]}</span><h3>${d.name}</h3></div></div>
     <p class="sh-text">${markup(d.text)}</p>
@@ -1190,6 +1236,23 @@ function hausSheet() {
     <p class="sh-wert">${markup(stand)}</p>
     <div class="sh-knoepfe"><button class="btn" data-akt="sheetZu">Zurück</button>
     ${imFoyer ? `<button class="btn btn-gold" data-akt="hausBauen" ${run.geld >= preis ? '' : 'disabled'}>Bauen · ${muenze(preis)}</button>` : `<button class="btn" disabled>Gebaut wird im Foyer · ${muenze(preis)}</button>`}</div>`);
+}
+
+function absagenSheet() {
+  const id = L.gutscheinFuer(run);
+  if (!id) return;
+  const g = GUTSCHEIN[id];
+  const a = ABENDE[run.abend];
+  const gage = run.strenge >= 2 && run.abend === 0 ? 0 : a.gage;
+  sheet(`<div class="sh-kopf">${zettelHTML('gutschein', id)}<div><span class="klein">Gutschein für die abgesagte ${a.name}</span><h3>${g.name}</h3></div></div>
+    <p class="sh-text">${markup(g.text)}</p>
+    <p class="sh-wert">Wer die ${a.name} absagt, verzichtet auf die Gage (${muenze(gage)}), auf Zinsen und auf den Besuch im Foyer. Weiter geht es direkt mit der ${ABENDE[run.abend + 1].name}.</p>
+    <div class="sh-knoepfe"><button class="btn" data-akt="sheetZu">Doch spielen</button>
+    <button class="btn btn-rot" data-akt="absagen">${a.name} absagen</button></div>`);
+}
+
+function merkeStars() {
+  for (const s of run.stars) meta.stars[s.id] = 1;
 }
 
 function bestaetigen(text, akt, knopf = 'Ja') {
@@ -1312,6 +1375,11 @@ function zeigeAnleitung() {
       </ul></div>
     <div class="ov-sektion"><h3>Sternstunden</h3>
       <p>Berühmte Paarungen und Zyklen – die Da-Ponte-Trilogie, Cav/Pag, der Ring … Stehen sie gemeinsam im Programm, vervielfacht sich die Begeisterung. Sechzehn gibt es zu entdecken.</p></div>
+    <div class="ov-sektion"><h3>Zwischen den Abenden</h3>
+      <ul>
+        <li><b>Absagen:</b> Premiere und Gala dürfen ausfallen. Dann gibt es keine Gage und kein Foyer, aber einen <b>Gutschein</b> – ein Gratis-Paket, eine Uraufführung, einen besänftigten Kritiker …</li>
+        <li><b>Post für die Intendanz:</b> Zu Beginn jeder neuen Station wartet ein Ereignis mit zwei oder drei Antworten. Nicht jede ist umsonst.</li>
+      </ul></div>
     <div class="ov-sektion"><h3>Das Foyer</h3>
       <ul>
         <li><b>Stars</b> (bis zu fünf) wirken bei jeder Vorstellung, von links nach rechts.</li>
@@ -1410,6 +1478,28 @@ const AKTIONEN = {
   },
   paketSkip: () => { L.paketWaehlen(run, null); renderSpiel(); speichern(); },
   investInfo: () => investSheet(),
+  absagenInfo: () => { A.klick(); absagenSheet(); },
+  absagen: () => {
+    const g = GUTSCHEIN[L.gutscheinFuer(run)];
+    const r = L.absagen(run);
+    sheetZu();
+    if (r.fehler) { toast(r.fehler); return; }
+    A.austeilen(3);
+    banner(`<span class="b-klein">Abgesagt · Gutschein</span><span class="b-gross">${g.name}</span><span class="b-neu">${r.text}</span>`, 1500);
+    if (run.pack) for (const a of run.pack.auswahl) if (a.art === 'star') meta.starsGesehen = { ...(meta.starsGesehen || {}), [a.id]: 1 };
+    merkeStars();
+    renderSpiel();
+    speichern();
+  },
+  ereignisWahl: (el) => {
+    const r = L.ereignisWaehlen(run, Number(el.dataset.i));
+    if (r.fehler) { toast(r.fehler); return; }
+    A.geld();
+    toast(markup(r.text), 'gut');
+    merkeStars();
+    renderSpiel();
+    speichern();
+  },
   hausInfo: () => { A.klick(); hausSheet(); },
   hausBauen: () => {
     const n = L.bauStand(run);

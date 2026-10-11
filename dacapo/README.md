@@ -33,6 +33,14 @@ auch offline (Service Worker).
   nicht“).
 - Zwischen den Abenden geht es ins Foyer: Stars engagieren, Rezensionen
   kaufen, Werke proben, Pakete öffnen, investieren.
+- **Absagen:** Premiere und Gala dürfen ausfallen. Dann gibt es keine Gage
+  und kein Foyer, aber einen **Gutschein**: ein Gratis-Paket, einen
+  Talentscout, eine Uraufführung, einen besänftigten Kritiker … Welcher
+  Gutschein wartet, steht schon auf dem Spielplan.
+- **Post für die Intendanz:** Zu Beginn jeder neuen Station liegt ein Ereignis
+  auf dem Schreibtisch – der Tenor ist heiser, im Fundus brennt es, die
+  Staatsoper will deinen besten Star. Zwei oder drei Antworten, selten
+  umsonst.
 - Für volle Kassen gibt es dort das **Festspielhaus**: Jeder Bauabschnitt
   (Grundstein, Bühnenturm, Mystischer Abgrund …) multipliziert die
   Begeisterung jeder Vorstellung dauerhaft mit ×1,5 und kostet doppelt so viel
@@ -58,8 +66,10 @@ Passen mehrere, spielt das Haus die stärkste Lesart.
 ## Was drinsteckt
 
 - **121 Werke** von Monteverdi bis Muhly, in fünf Schulen (ITA, DEU, FRA, OST, ENG)
-- **49 Stars** – Callas, Caruso, Toscanini, Karajan, Ludwig II., Cosima, Da Ponte,
-  das Gewandhausorchester, das Leipziger Allerlei, das Silvester-Orakel …
+- **57 Stars** – Callas, Caruso, Toscanini, Karajan, Ludwig II., Cosima, Da Ponte,
+  das Gewandhausorchester, das Leipziger Allerlei, das Silvester-Orakel, die
+  Zweitbesetzung (kopiert ihren rechten Nachbarn) …
+- **11 Gutscheine** fürs Absagen und **15 Ereignisse** zwischen den Stationen
 - **16 Sternstunden** zum Entdecken: Ring, Trilogia popolare, Da-Ponte-Trilogie,
   Cav/Pag, Il trittico, „Uraufgeführt in Leipzig“ und mehr
 - **17 Kritiker** plus zwei Finalgegner in Bayreuth
@@ -92,6 +102,7 @@ Passen mehrere, spielt das Haus die stärkste Lesart.
 | `style.css` | Gestaltung (Samt, Gold, Programmzettel) |
 | `js/data.js` | Kataloge: Werke, Programme, Stars, Kritiker, Häuser |
 | `js/logic.js` | Spiellogik ohne DOM, mit eigenem Zufallsgenerator |
+| `js/ereignisse.js` | Post für die Intendanz: Ereignisse und ihre Antworten |
 | `js/main.js` | Oberfläche, Animationen, Eingabe |
 | `js/audio.js` | Klang und Musik (Web Audio) |
 | `js/fx.js` | Rosen, Goldstaub, Konfetti |
