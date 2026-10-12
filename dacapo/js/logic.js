@@ -680,7 +680,7 @@ export function auffuehren(run, uidsGewaehlt) {
   r.haende -= 1;
   r.nr += 1;
   r.arten.push(art);
-  r.beste = Math.max(r.beste, gesamt);
+  if (gesamt > r.beste) { r.beste = gesamt; r.besteArt = art; }
   run.gespielt[art] += 1;
   if (r.kritiker === 'pedant' && run.stufen[art] > 1) run.stufen[art] -= 1;
   let kosten = 0;
@@ -723,8 +723,19 @@ export function auffuehren(run, uidsGewaehlt) {
   } else {
     ergebnis.neu = ziehen(run);
     if (r.kritiker === 'primadonna') primadonnaWuerfeln(run);
+    if (erschoepft(run)) ergebnis.verloren = true;
   }
   return ergebnis;
+}
+
+// Kein Werk mehr in der Hand und keins mehr im Stapel: Es lässt sich nichts
+// mehr aufführen, der Vorhang fällt. (Kleine Repertoires, Huster, Streichungen.)
+function erschoepft(run) {
+  const r = run.round;
+  if (r.hand.length || r.stapel.length) return false;
+  run.phase = 'vorhang';
+  run.stats.ende = { station: run.station, abend: run.abend, kritiker: r.kritiker, punkte: r.punkte, ziel: r.ziel, leer: true };
+  return true;
 }
 
 export function umbesetzen(run, uidsGewaehlt) {
@@ -736,7 +747,8 @@ export function umbesetzen(run, uidsGewaehlt) {
   r.hand = r.hand.filter((u) => !uids.includes(u));
   r.ablage.push(...uids);
   for (const u of uids) delete r.verdeckt[u];
-  return { uids, neu: ziehen(run) };
+  const neu = ziehen(run);
+  return { uids, neu, verloren: erschoepft(run) };
 }
 
 // ------------------------------------------------------------------ Abendende
@@ -775,8 +787,24 @@ function abendGewonnen(run) {
 
   run.stats.abende += 1;
   const sieg = run.station === STATIONEN && run.abend === 2 && !run.endlos;
-  run.bravo = { zeilen, ereignisse, summe: zeilen.reduce((s, z) => s + z.v, 0), punkte: r.punkte, ziel: r.ziel, sieg };
+  // Standing Ovations: Wer am Abend das Doppelte des Ziels holt, dem schreibt
+  // die Presse das Programm der besten Vorstellung eine Stufe hoch.
+  const ovation = ovationen(run);
+  if (ovation) {
+    run.stufen[ovation] += 1;
+    run.stats.ovationen = (run.stats.ovationen || 0) + 1;
+    ereignisse.unshift({ text: `Standing Ovations! Die Presse feiert deinen ${PROGRAMME[ovation].name}: Stufe ${run.stufen[ovation]}.`, art: 'gut' });
+  }
+  run.bravo = { zeilen, ereignisse, summe: zeilen.reduce((s, z) => s + z.v, 0), punkte: r.punkte, ziel: r.ziel, sieg, ovation };
   run.phase = 'bravo';
+}
+
+export const OVATION_FAKTOR = 2;
+/** Gibt das Programm zurück, das für Standing Ovations aufsteigt, sonst null. */
+export function ovationen(run) {
+  const r = run.round;
+  if (!r || r.punkte < OVATION_FAKTOR * r.ziel) return null;
+  return r.besteArt || r.arten[r.arten.length - 1] || null;
 }
 
 export function kassieren(run) {
@@ -842,8 +870,10 @@ function fehlendeSternWerke(run) {
   return [...fehlend];
 }
 
+// Fehlende Werke angefangener Sternstunden kommen öfter, mit Reclams
+// Opernführer deutlich öfter.
 function zufallsWerk(run) {
-  if (hatStar(run, 'opernfuehrer') && rnd(run) < 0.5) {
+  if (rnd(run) < (hatStar(run, 'opernfuehrer') ? 0.5 : 0.2)) {
     const f = fehlendeSternWerke(run);
     if (f.length) return pick(run, f);
   }
@@ -873,8 +903,40 @@ const PAKETE = {
   feuilleton: { name: 'Feuilleton', preis: 4, text: 'Wähle eine von drei Rezensionen.' },
   mappe: { name: 'Probenmappe', preis: 4, text: 'Wähle eine von drei Proben.' },
   agentur: { name: 'Künstleragentur', preis: 6, text: 'Wähle einen von zwei Stars.' },
+  verlag: { name: 'Notenbestellung', preis: 6, text: 'Wähle eins von drei Werken des bestellten Komponisten.' },
 };
 export { PAKETE };
+
+// ------------------------------------------------------------------ Verlag
+
+// Einmal pro Foyer: einen Komponisten bestellen, eins von drei seiner Werke
+// nehmen. Werke, die noch nicht im Repertoire stehen, kommen zuerst.
+export const VERLAG_PREIS = PAKETE.verlag.preis;
+
+/** Alle Komponisten mit Werken im Katalog: wie viele davon schon im Repertoire stehen. */
+export function verlagKatalog(run) {
+  const da = new Set(run.repertoire.map((c) => c.w));
+  const liste = Object.keys(KOMPONISTEN).map((id) => {
+    const werke = WERKE.filter((w) => w.c === id);
+    return { id, name: KOMPONISTEN[id][0], werke: werke.length, da: werke.filter((w) => da.has(w.id)).length };
+  }).filter((k) => k.werke > 0);
+  return liste.sort((a, b) => b.da - a.da || a.name.localeCompare(b.name, 'de'));
+}
+
+export function verlagBestellen(run, komp) {
+  if (run.phase !== 'shop' || !run.shop) return 'Bestellt wird im Foyer.';
+  if (run.shop.verlag) return 'Der Verlag liefert nur einmal pro Pause.';
+  if (run.geld < VERLAG_PREIS) return 'Zu wenig Dukaten.';
+  const alle = WERKE.filter((w) => w.c === komp);
+  if (!alle.length) return 'Davon führt der Verlag nichts.';
+  const da = new Set(run.repertoire.map((c) => c.w));
+  const reihe = [...mischen(run, alle.filter((w) => !da.has(w.id))), ...mischen(run, alle.filter((w) => da.has(w.id)))];
+  run.geld -= VERLAG_PREIS;
+  run.shop.verlag = komp;
+  run.pack = { art: 'verlag', auswahl: reihe.slice(0, 3).map((w) => ({ art: 'werk', id: w.id, enh: null })), komp };
+  run.phase = 'pack';
+  return null;
+}
 
 function paket(run) {
   const r = rnd(run);

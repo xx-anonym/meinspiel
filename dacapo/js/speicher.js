@@ -23,7 +23,7 @@ const META_LEER = () => ({
   laeufe: 0, siege: 0, besteStation: 0, besteVorstellung: 0, besteArt: null,
   werke: {}, sternstunden: {}, stars: {}, programme: {}, komponisten: {},
   frei: { leipzig: true }, strengeFrei: 1, siegeJeDeck: {}, taeglich: {},
-  vorstellungen: 0, neu: [],
+  vorstellungen: 0, neu: [], besterBau: 0,
 });
 
 export function ladeMeta() {
@@ -49,7 +49,8 @@ export function pruefeFreischaltungen(meta) {
     const ok = (f.art === 'station' && meta.besteStation >= f.wert)
       || (f.art === 'sieg' && meta.siege >= f.wert)
       || (f.art === 'sternstunden' && stern >= f.wert)
-      || (f.art === 'werke' && werke >= f.wert);
+      || (f.art === 'werke' && werke >= f.wert)
+      || (f.art === 'festspielhaus' && (meta.besterBau || 0) >= f.wert);
     if (ok) { meta.frei[r.id] = true; neu.push(r); }
   }
   return neu;

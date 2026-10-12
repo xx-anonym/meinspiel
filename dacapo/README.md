@@ -31,8 +31,14 @@ auch offline (Service Worker).
 - Jede Station hat drei Abende: Premiere, Gala und Kritikerabend. Am
   Kritikerabend gilt eine Sonderregel („Der Purist: Werke nach 1900 zählen
   nicht“).
+- **Standing Ovations:** Wer an einem Abend das Doppelte des Ziels holt, dem
+  schreibt die Presse das Programm der besten Vorstellung eine Stufe hoch. Da
+  der Abend mit dem Erreichen des Ziels endet, lohnt sich der große Wurf.
 - Zwischen den Abenden geht es ins Foyer: Stars engagieren, Rezensionen
-  kaufen, Werke proben, Pakete öffnen, investieren.
+  kaufen, Werke proben, Pakete öffnen, investieren – und einmal pro Pause beim
+  **Verlag** bestellen: Komponist wählen, eins von drei seiner Werke nehmen,
+  zuerst solche, die noch fehlen. Fehlende Teile angefangener Sternstunden
+  tauchen außerdem öfter auf.
 - **Absagen:** Premiere und Gala dürfen ausfallen. Dann gibt es keine Gage
   und kein Foyer, aber einen **Gutschein**: ein Gratis-Paket, einen
   Talentscout, eine Uraufführung, einen besänftigten Kritiker … Welcher
@@ -75,7 +81,8 @@ Passen mehrere, spielt das Haus die stärkste Lesart.
 - **17 Kritiker** plus zwei Finalgegner in Bayreuth
 - **10 Rezensionen** (LVZ bis Deutschlandfunk Kultur), **11 Proben**, **9 Investitionen**
 - **Das Festspielhaus** als Großprojekt ohne Ende, damit Dukaten nie wertlos werden
-- **6 Startrepertoires** zum Freischalten und **5 Strengestufen**
+- **7 Startrepertoires** zum Freischalten – zuletzt die **Komische Oper** mit nur
+  den 26 heiteren Werken – und **5 Strengestufen**
 - **Spielplan des Tages**: ein Lauf mit festem Zufall, für alle gleich
 - **Werkverzeichnis** über alle Läufe: gespielte Werke, Sternstunden, Stars, Statistik
 - Endlos-Modus mit Gastspielen nach dem Sieg

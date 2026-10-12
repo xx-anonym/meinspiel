@@ -153,6 +153,9 @@ function zettelHTML(art, id, extra = {}) {
     const v = INVESTITION[id];
     return `<div class="zettel invest">${icon('haus')}<div class="z-kopf">${v.name}</div><div class="z-text">${v.text}</div></div>`;
   }
+  if (art === 'verlag') {
+    return `<div class="zettel verlag">${icon('quill')}<div class="z-kopf">Noten\u00adbestellung</div><div class="z-text">Komponist wählen, eins von drei Werken nehmen.</div></div>`;
+  }
   if (art === 'gutschein') {
     const g = GUTSCHEIN[id];
     return `<div class="zettel gutschein">${icon('ticket')}<div class="z-kopf">${g.name}</div><div class="z-art">Gutschein</div></div>`;
@@ -440,7 +443,7 @@ function renderVorschau() {
     fP.textContent = '0'; fB.textContent = '0';
     hin.className = 'hinweis';
     const r = run.round;
-    hin.textContent = r.nr === 0 ? 'Wähle bis zu fünf Werke für die Vorstellung.' : `Noch ${fmt(Math.max(0, r.ziel - r.punkte))} Applaus bis zum Ziel.`;
+    hin.textContent = `${r.nr === 0 ? 'Wähle bis zu fünf Werke.' : `Noch ${fmt(Math.max(0, r.ziel - r.punkte))} bis zum Ziel.`} Standing Ovations ab ${fmt(L.OVATION_FAKTOR * r.ziel)}.`;
     return;
   }
   const pr = L.pruefeAuswahl(run, uids);
@@ -583,6 +586,7 @@ function foyerHTML() {
   }).join('');
   // Ein Paket für 0 Dukaten gibt es nur mit dem Gutschein „Freikarten“.
   const pakete = sh.pakete.map((p, i) => `<div class="ware ${p.gekauft ? 'verkauft' : ''} ${p.preis === 0 ? 'gratis' : ''}" data-akt="paketInfo" data-i="${i}">${p.preis === 0 ? '<span class="gratis-band">Freikarte</span>' : ''}${zettelHTML('paket', p.art)}<span class="preis ${run.geld < p.preis ? 'zu-teuer' : ''}">${p.preis === 0 ? 'gratis' : muenze(p.preis)}</span></div>`).join('');
+  const verlag = `<div class="ware ${sh.verlag ? 'verkauft' : ''}" data-akt="verlagInfo">${zettelHTML('verlag')}<span class="preis ${run.geld < L.VERLAG_PREIS ? 'zu-teuer' : ''}">${muenze(L.VERLAG_PREIS)}</span></div>`;
   const haus = `<div class="ware" data-akt="hausInfo">${zettelHTML('haus')}<span class="preis ${run.geld < L.bauPreis(run) ? 'zu-teuer' : ''}">${muenze(L.bauPreis(run))}</span></div>`;
   const inv = invId ? `<div class="ware" data-akt="investInfo">${zettelHTML('invest', invId)}<span class="preis ${run.geld < INVESTITION[invId].preis ? 'zu-teuer' : ''}">${muenze(INVESTITION[invId].preis)}</span></div>` : '';
   return `<div class="panel foyer">
@@ -594,6 +598,7 @@ function foyerHTML() {
     <div class="foyer-reihe">
       <div class="foyer-sektion"><span class="klein">Pakete</span><div class="foyer-reihe">${pakete}</div></div>
       ${inv ? `<div class="foyer-sektion"><span class="klein">Investition</span><div class="foyer-reihe">${inv}</div></div>` : ''}
+      <div class="foyer-sektion"><span class="klein">Verlag</span><div class="foyer-reihe">${verlag}</div></div>
       <div class="foyer-sektion"><span class="klein">Großprojekt</span><div class="foyer-reihe">${haus}</div></div>
     </div>
     <div class="foyer-knoepfe">
@@ -627,7 +632,7 @@ function paketHTML() {
     return `<div class="wahl">${inhalt}<span class="wahl-text">${text}</span><button class="btn btn-gold btn-klein" data-akt="paketWahl" data-i="${i}">Nehmen</button></div>`;
   }).join('');
   return `<div class="panel">
-    <span class="klein">${pk.gutschein ? 'Gutschein eingelöst' : 'Paket geöffnet'}</span>
+    <span class="klein">${pk.gutschein ? 'Gutschein eingelöst' : pk.komp ? `Lieferung vom Verlag · ${KOMPONISTEN[pk.komp][1]}` : 'Paket geöffnet'}</span>
     <h2>${P.name}</h2>
     <p>${P.text}</p>
     <div class="wahl-reihe">${wahl}</div>
@@ -866,7 +871,11 @@ async function spielen() {
   if (anteil >= 0.35) schuetteln(anteil);
   A.applaus(Math.min(1, 0.25 + anteil * 0.7));
   if (anteil >= 0.6) FX.rosen(Math.min(1, anteil * 0.6));
-  if (erg.gesamt >= zielVorher) banner('<span class="b-klein">Ein einziger Abend</span><span class="b-gross">Standing Ovations!</span>', 1500);
+  const ovation = erg.gewonnen && run.bravo?.ovation;
+  if (ovation) {
+    banner(`<span class="b-klein">Doppeltes Ziel</span><span class="b-gross">Standing Ovations!</span><span class="b-x">${PROGRAMME[ovation].name}: Stufe ${run.stufen[ovation]}</span>`, 1900);
+    FX.konfetti(90);
+  } else if (erg.gesamt >= zielVorher) banner('<span class="b-klein">In einer einzigen Vorstellung</span><span class="b-gross">Bravissimo!</span>', 1500);
   buehne.innerHTML = '';
   await warte(250);
 
@@ -923,6 +932,7 @@ async function umbesetzen() {
   auswahl.clear();
   busy = false;
   if (!erg) { renderHand(); return; }
+  if (erg.verloren) { A.niederlage(); speichern(); laufBeendet(false); return; }
   renderHud();
   renderHand(erg.neu);
   A.austeilen(erg.neu.length);
@@ -1062,7 +1072,8 @@ function rezensionText(sieg) {
   if (!sieg && st.ende) {
     const e = st.ende;
     const fehlt = Math.max(0, e.ziel - e.punkte);
-    if (e.kritiker) teile.push(`Am Kritikerabend hatte ${KRITIK[e.kritiker].name} das letzte Wort – es fehlten ${fmt(fehlt)} Applaus.`);
+    if (e.leer) teile.push(`Am Ende war das Repertoire erschöpft – kein Werk mehr auf dem Pult, und es fehlten ${fmt(fehlt)} Applaus.`);
+    else if (e.kritiker) teile.push(`Am Kritikerabend hatte ${KRITIK[e.kritiker].name} das letzte Wort – es fehlten ${fmt(fehlt)} Applaus.`);
     else teile.push(`${e.abend === 2 ? 'Beim Kritikerabend' : `Bei der ${ABENDE[e.abend].name}`} fehlten am Ende ${fmt(fehlt)} Applaus.`);
   }
   const schluss = sieg ? ['Würde sofort wieder hingehen.', 'Fünf Sterne, ohne Zögern.', 'Bravissimo.'] : ['Würde wieder hingehen.', 'Nächste Spielzeit wird alles anders.', 'Da capo, bitte.', 'Die Inszenierung bleibt im Gedächtnis.'];
@@ -1240,6 +1251,16 @@ function hausSheet() {
     ${imFoyer ? `<button class="btn btn-gold" data-akt="hausBauen" ${run.geld >= preis ? '' : 'disabled'}>Bauen · ${muenze(preis)}</button>` : `<button class="btn" disabled>Gebaut wird im Foyer · ${muenze(preis)}</button>`}</div>`);
 }
 
+function verlagSheet() {
+  const katalog = L.verlagKatalog(run);
+  const kann = run.geld >= L.VERLAG_PREIS && !run.shop?.verlag;
+  sheet(`<div class="sh-kopf">${zettelHTML('verlag')}<div><span class="klein">Verlag · einmal pro Pause</span><h3>Notenbestellung</h3></div></div>
+    <p class="sh-text">Wähle einen Komponisten. Der Verlag schickt drei seiner Werke – zuerst solche, die noch nicht in deinem Repertoire stehen –, eins davon nimmst du.</p>
+    <p class="sh-wert">${kann ? `Kostet ${muenze(L.VERLAG_PREIS)}. Die Zahl zeigt: im Repertoire / im Katalog.` : run.shop?.verlag ? 'In dieser Pause wurde schon bestellt.' : 'Zu wenig Dukaten.'}</p>
+    <div class="verlag-liste">${katalog.map((k) => `<button class="verlag-komp ${k.da ? 'hat' : ''}" data-akt="verlagBestellen" data-id="${k.id}" ${kann ? '' : 'disabled'}><b>${k.name}</b><span>${k.da}/${k.werke}</span></button>`).join('')}</div>
+    <div class="sh-knoepfe"><button class="btn" data-akt="sheetZu">Zurück</button></div>`);
+}
+
 function absagenSheet() {
   const id = L.gutscheinFuer(run);
   if (!id) return;
@@ -1365,6 +1386,7 @@ function zeigeAnleitung() {
         <li><b>Applaus = Publikum × Begeisterung.</b> Das Programm (siehe unten) gibt die Grundwerte, jedes gezählte Werk bringt seinen <span class="t-p">Ruhm</span> als Publikum dazu.</li>
         <li>Du hast vier <b>Vorstellungen</b> und drei <b>Umbesetzungen</b> (Werke abwerfen und nachziehen).</li>
         <li>Übrige Vorstellungen bringen Dukaten, und je 5 Dukaten auf dem Konto gibt es 1 Dukat Zinsen.</li>
+        <li><b>Standing Ovations:</b> Holst du an einem Abend das Doppelte des Ziels, steigt das Programm deiner besten Vorstellung um eine Stufe. Der Abend endet, sobald das Ziel erreicht ist – es lohnt sich also, auf einen großen Wurf hinzuarbeiten.</li>
       </ul></div>
     <div class="ov-sektion"><h3>Die Programme</h3>
       <table class="tabelle"><tbody>${PROGRAMM_IDS.map((a) => `<tr><td><span class="prog">${PROGRAMME[a].name}</span><span class="regel">${PROGRAMME[a].regel}</span></td><td class="zahl"><span class="t-p">${PROGRAMME[a].p}</span> × <span class="t-b">${PROGRAMME[a].b}</span></td></tr>`).join('')}</tbody></table>
@@ -1388,6 +1410,7 @@ function zeigeAnleitung() {
         <li><b>Rezensionen</b> heben ein Programm sofort um eine Stufe.</li>
         <li><b>Proben</b> verändern Werke: Neuinszenierung, Starbesetzung, Übersetzung, Streichung …</li>
         <li><b>Werke</b> und <b>Pakete</b> erweitern dein Repertoire, <b>Investitionen</b> gelten für die ganze Spielzeit.</li>
+        <li>Beim <b>Verlag</b> bestellst du einmal pro Pause gezielt: Komponist wählen, eins von drei seiner Werke nehmen.</li>
         <li>Das <b>Festspielhaus</b> ist das Großprojekt für volle Kassen: Jeder Bauabschnitt multipliziert die Begeisterung dauerhaft mit ×1,5 und kostet doppelt so viel wie der vorige (25, 50, 100 … Dukaten).</li>
       </ul></div>
     <div class="ov-sektion"><h3>Tastatur</h3>
@@ -1481,6 +1504,15 @@ const AKTIONEN = {
   paketSkip: () => { L.paketWaehlen(run, null); renderSpiel(); speichern(); },
   investInfo: () => investSheet(),
   absagenInfo: () => { A.klick(); absagenSheet(); },
+  verlagInfo: () => { A.klick(); verlagSheet(); },
+  verlagBestellen: (el) => {
+    const f = L.verlagBestellen(run, el.dataset.id);
+    if (f) { toast(f); return; }
+    sheetZu();
+    A.austeilen(3);
+    renderSpiel();
+    speichern();
+  },
   absagen: () => {
     const g = GUTSCHEIN[L.gutscheinFuer(run)];
     const r = L.absagen(run);
@@ -1508,6 +1540,7 @@ const AKTIONEN = {
     const f = L.bauen(run);
     if (f) { toast(f); return; }
     sheetZu(); A.geld(); A.sternstunde();
+    if (L.bauStand(run) > (meta.besterBau || 0)) { meta.besterBau = L.bauStand(run); pruefeMeta(); }
     banner(`<span class="b-klein">Festspielhaus · Bauabschnitt ${n + 1}</span><span class="b-gross">${L.bauabschnitt(n).name}</span><span class="b-x">×${fmtX(L.hausFaktor(run))} Begeisterung</span>`, 1700);
     FX.goldstaub(window.innerWidth / 2, window.innerHeight * 0.42, 30);
     renderSpiel(); speichern();
@@ -1619,6 +1652,8 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) speic
 A.einstellen(einst);
 document.documentElement.style.setProperty('--tempo', einst.tempo);
 if (run && run.phase === 'vorhang') run = null;
+// Wer schon vor dem Update weit gebaut hat, bekommt die Freischaltung gleich.
+if (run && L.bauStand(run) > (meta.besterBau || 0)) { meta.besterBau = L.bauStand(run); setTimeout(pruefeMeta, 700); }
 if (run) {
   const neu = L.kritikerReparieren(run);
   if (neu) {

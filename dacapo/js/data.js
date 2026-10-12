@@ -536,6 +536,15 @@ export const REPERTOIRES = [
     star: 'raritaeten', zufall: 40, frei: { art: 'werke', wert: 60, text: 'Bringe 60 verschiedene Werke auf die Bühne.' },
     werke: [],
   },
+  {
+    id: 'komisch', name: 'Komische Oper', text: 'Nur die 26 heiteren Werke, von Mozart bis zur Operette. Sie kommen oft wieder – und gehen an langen Abenden aus. Startet mit dem Buffo.',
+    star: 'buffo', frei: { art: 'festspielhaus', wert: 3, text: 'Baue das Festspielhaus bis zum Mystischen Abgrund (drei Bauabschnitte).' },
+    werke: ['zauberflote', 'don-giovanni', 'nozze-di-figaro', 'cosi-fan-tutte', 'entfuehrung',
+      'barbiere', 'cenerentola', 'elisir', 'don-pasquale', 'falstaff', 'gianni-schicchi',
+      'zar-zimmermann', 'wildschuetz', 'martha', 'meistersinger', 'haensel-gretel', 'verkaufte-braut',
+      'rosenkavalier', 'arabella', 'intermezzo', 'capriccio', 'liebe-drei-orangen', 'midsummer-nights-dream',
+      'fledermaus', 'lustige-witwe', 'csardasfuerstin'],
+  },
 ];
 export const REPERTOIRE = Object.fromEntries(REPERTOIRES.map((r) => [r.id, r]));
 

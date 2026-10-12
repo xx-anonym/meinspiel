@@ -508,6 +508,19 @@ b { font-weight: 700; }
 .zettel.invest { background: linear-gradient(165deg, #22324a, #0e1626); color: var(--text); border: 1.5px solid #8fb7e6; }
 .zettel.invest .z-kopf { border-color: #8fb7e6; color: #cfe2fa; }
 .zettel.invest .ic { color: #8fb7e6; }
+.zettel.verlag { background: linear-gradient(165deg, #e8eef5, #b9c8d8); }
+.zettel.verlag .ic { color: #22324a; }
+.verlag-liste { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+.verlag-komp {
+  display: inline-flex; align-items: baseline; gap: 6px; cursor: pointer; font: inherit; font-size: .85rem;
+  color: var(--text-m); background: rgba(0, 0, 0, .3); border: 1px solid rgba(255, 255, 255, .1); border-radius: 999px; padding: 4px 10px;
+}
+.verlag-komp b { color: var(--text); font-weight: 600; }
+.verlag-komp span { font-size: .75rem; color: var(--text-d); font-variant-numeric: tabular-nums; }
+.verlag-komp.hat { border-color: var(--gold-d); }
+.verlag-komp.hat b { color: var(--gold-h); }
+.verlag-komp:hover:not(:disabled) { border-color: var(--gold-h); }
+.verlag-komp:disabled { opacity: .45; cursor: default; }
 .zettel.gutschein { background: linear-gradient(165deg, #f3e3b0, #d9b862); border: 1.5px dashed #8c6f2a; }
 .zettel.gutschein .ic { color: #7a2030; }
 .zettel.haus { position: relative; background: linear-gradient(165deg, #6b3a22, #2e1408); color: var(--text); border: 1.5px solid var(--gold-h); }
