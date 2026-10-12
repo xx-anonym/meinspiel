@@ -73,7 +73,7 @@ Bariton, Helden-/Charakterbariton, seriöser Bass, Bassbuffo.
 | `js/speicher.js` | Spielstand und Archiv im Browser |
 | `tools/sim.mjs` | Balance-Simulation (`node tools/sim.mjs leipzig 300`) |
 
-Das Vorgängerspiel „Da capo!“ liegt in der Git-Historie dieses Branches.
+Im Ordner [`dacapo/`](dacapo/) liegt das Vorgängerspiel **Da capo!**, ein Opern-Roguelike im Stil von Balatro (eigenes README).
 
 Im Ordner [`taktstock/`](taktstock/) liegt außerdem **Taktstock**, ein Dirigierspiel mit echten Orchesteraufnahmen (eigenes README).
 

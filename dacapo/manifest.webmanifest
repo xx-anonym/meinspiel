@@ -1,0 +1,12 @@
+{
+  "name": "Da capo!",
+  "short_name": "Da capo!",
+  "description": "Ein Opern-Roguelike.",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1a070c",
+  "theme_color": "#1a070c",
+  "lang": "de",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

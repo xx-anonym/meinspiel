@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="v" x1="0" x2="1">
+      <stop offset="0" stop-color="#5c0f1c"/><stop offset=".25" stop-color="#8b1a2b"/><stop offset=".5" stop-color="#5c0f1c"/><stop offset=".75" stop-color="#8b1a2b"/><stop offset="1" stop-color="#5c0f1c"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#1a070c"/>
+  <path d="M6 8h20c-2 14-1 34 4 48H6z" fill="url(#v)"/>
+  <path d="M58 8H38c2 14 1 34-4 48h24z" fill="url(#v)"/>
+  <path d="M4 6h56v6H4z" fill="#c9a84c"/>
+  <text x="32" y="42" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-weight="700" font-size="22" fill="#ecd27f">DC</text>
+</svg>
