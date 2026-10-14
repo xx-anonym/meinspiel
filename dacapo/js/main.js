@@ -383,6 +383,7 @@ function spielplanHTML() {
   const k = KRITIK[kId];
   const huste = L.hatStar(run, 'hustenbonbon');
   const ohneRegel = !L.kritikerAktiv(run, 2);
+  const naechsterKritiker = KRITIK[L.kritikerVon(run, run.station + 1)] || null;
   const mods = L.aktiveModifikatoren(run);
   const abende = ABENDE.map((a, i) => {
     const status = i < run.abend ? 'fertig' : i === run.abend ? 'aktuell' : 'kommend';
@@ -413,6 +414,7 @@ function spielplanHTML() {
     </div>
     <div class="sp-abende">${abende}</div>
     ${mods.length ? `<ul class="sp-mods">${mods.map((m) => `<li>${m}</li>`).join('')}</ul>` : ''}
+    ${naechsterKritiker ? `<p class="sp-vorschau">${icon('eye')}<span>Nächste Station, ${L.haus(run.station + 1).stadt}: <b>${naechsterKritiker.name}</b> – ${naechsterKritiker.regel}</span></p>` : ''}
     <div class="sp-fuss"><button class="btn btn-gold btn-gross" data-akt="vorhangAuf">Vorhang auf: ${ABENDE[run.abend].name}</button></div>
   </div>`;
 }
@@ -426,10 +428,37 @@ function stageHTML() {
     ${k ? `<div class="stage-kritiker"><b>${k.name}:</b> ${k.regel}</div>` : ''}
     <div class="stage-prog" id="progName">&nbsp;</div>
     <div class="formel"><div class="box box-p"><span class="lbl">Publikum</span><span id="fP">0</span></div><span class="mal">×</span><div class="box box-b"><span class="lbl">Begeisterung</span><span id="fB">0</span></div>${L.bauStand(run) ? `<span class="haus-x" id="hausX" data-akt="hausInfo" title="Festspielhaus">${icon('haus')}<b>×${fmtX(L.hausFaktor(run))}</b></span>` : ''}</div>
+    <div class="stage-leiste" id="stageLeiste"></div>
     <div class="gesamt" id="gesamt"></div>
     <div class="gespielt" id="gespielt"></div>
     <div class="hinweis" id="hinweis"></div>
   </div>`;
+}
+
+// Leitmotiv und Souffleurkasten: was zuletzt erklang und was als Nächstes kommt.
+function renderLeiste(uids = []) {
+  const el = $('#stageLeiste');
+  if (!el || !run.round) return;
+  const r = run.round;
+  const m = L.leitmotiv(run, uids);
+  const ekl = r.kritiker === 'eklektikerin';
+  let motiv;
+  if (!m.komponisten.length) {
+    motiv = `<span class="leiste-chip leer" id="motivX">${icon('note')}<span>${ekl ? 'Keinen Komponisten wiederholen' : 'Leitmotiv: noch keins'}</span></span>`;
+  } else {
+    const namen = m.komponisten.map((k) => KOMPONISTEN[k][0]).join(', ');
+    let folge = '';
+    if (uids.length) folge = m.wirkung == null ? (m.kette ? ' · reißt ab' : '') : m.wirkung < 1 ? ' · ×0,5!' : ` → ×${fmtX(m.wirkung)}`;
+    const klasse = m.wirkung > 1 ? 'an' : m.wirkung != null && m.wirkung < 1 ? 'warn' : '';
+    motiv = `<span class="leiste-chip ${klasse}" id="motivX">${icon('note')}<span>${ekl ? 'Nicht wiederholen' : 'Leitmotiv'}: <b>${namen}</b>${m.kette ? ` ×${fmtX(m.faktor)}` : ''}${folge}</span></span>`;
+  }
+  const naechste = L.souffleur(run);
+  const souff = naechste == null
+    ? `<span class="leiste-chip leer">${icon('box')}<span>Souffleurkasten zu</span></span>`
+    : naechste.length
+      ? `<span class="leiste-chip">${icon('box')}<span>Als Nächstes: ${naechste.map((c) => `<b>${WERK[c.w].k || WERK[c.w].t}</b>`).join(', ')}</span></span>`
+      : `<span class="leiste-chip leer">${icon('box')}<span>Stapel leer</span></span>`;
+  el.innerHTML = motiv + souff;
 }
 
 function renderVorschau() {
@@ -437,13 +466,16 @@ function renderVorschau() {
   const uids = [...auswahl];
   const name = $('#progName'), fP = $('#fP'), fB = $('#fB'), hin = $('#hinweis');
   if (!name) return;
+  renderLeiste(uids);
   for (const el of $$('#hand .karte')) el.classList.remove('passiv');
+  const r = run.round;
   if (!uids.length) {
     name.innerHTML = '&nbsp;';
     fP.textContent = '0'; fB.textContent = '0';
     hin.className = 'hinweis';
-    const r = run.round;
-    hin.textContent = `${r.nr === 0 ? 'Wähle bis zu fünf Werke.' : `Noch ${fmt(Math.max(0, r.ziel - r.punkte))} bis zum Ziel.`} Standing Ovations ab ${fmt(L.OVATION_FAKTOR * r.ziel)}.`;
+    hin.textContent = r.erreicht
+      ? `Ziel erreicht! Vorhang – oder eine Zugabe über ${fmt(r.beste)} für Standing Ovations.`
+      : r.nr === 0 ? 'Wähle bis zu fünf Werke für die Vorstellung.' : `Noch ${fmt(Math.max(0, r.ziel - r.punkte))} Applaus bis zum Ziel.`;
     return;
   }
   const pr = L.pruefeAuswahl(run, uids);
@@ -462,6 +494,7 @@ function renderVorschau() {
   hin.className = 'hinweis ' + (pr.ok && !pr.nichtig ? '' : 'warn');
   if (!pr.ok && pr.grund) hin.textContent = pr.grund;
   else if (pr.nichtig) hin.textContent = `${pr.nichtig} Diese Vorstellung bringt 0 Applaus.`;
+  else if (r.erreicht) hin.textContent = `Zugabe: Mehr als ${fmt(r.beste)} bringt Standing Ovations. Danach fällt der Vorhang.`;
   else if (ev.statt) {
     hin.className = 'hinweis';
     hin.textContent = run.round.kritiker === 'abonnentin'
@@ -504,6 +537,13 @@ function renderAktionen() {
   if (run.phase !== 'abend') { $('#aktionen').innerHTML = ''; return; }
   const r = run.round;
   const pr = L.pruefeAuswahl(run, [...auswahl]);
+  if (r.erreicht) {
+    $('#aktionen').innerHTML = `
+    <button class="btn btn-rot" data-akt="umbesetzen" ${auswahl.size && r.umbes > 0 && !busy ? '' : 'disabled'}>Umbesetzen</button>
+    <button class="btn btn-blau btn-vorhang" data-akt="vorhang" title="Vorhang (V)" ${busy ? 'disabled' : ''}>Vorhang<small>+${muenze(r.haende)}</small></button>
+    <button class="btn btn-gold" data-akt="spielen" ${pr.ok && !busy ? '' : 'disabled'}>Zugabe!</button>`;
+    return;
+  }
   $('#aktionen').innerHTML = `
     <button class="btn btn-sort" data-akt="sortieren" title="Sortierung (S)"><small>Sortiert nach</small>${SORT_NAMEN[run.sortierung]}</button>
     <button class="btn btn-rot" data-akt="umbesetzen" ${auswahl.size && r.umbes > 0 && !busy ? '' : 'disabled'}>Umbesetzen</button>
@@ -731,6 +771,7 @@ async function spielen() {
   const r = run.round;
   const zielVorher = r.ziel;
   const punkteVorher = r.punkte;
+  const besteVorher = r.beste;
   const geldVorher = run.geld;
   const rects = new Map(uids.map((u) => [u, rectVon($(`#hand .karte[data-uid="${u}"]`))]));
   const erg = L.auffuehren(run, uids);
@@ -837,6 +878,15 @@ async function spielen() {
         if (s.i != null) { starEl(s.i)?.classList.add('wackeln'); flug(s.text, 'w', starEl(s.i), true); }
         await warte(240);
         break;
+      case 'motiv': {
+        const el = $('#motivX');
+        flug(s.bruch ? '×0,5' : `×${fmtX(s.v)}`, s.bruch ? 'n' : 'x', el ?? fB);
+        pulsiere(el);
+        fB.textContent = fmtB(s.B); pulsiere(fB.parentElement);
+        if (s.bruch) A.nichts(); else A.faktor();
+        await warte(420);
+        break;
+      }
       case 'haus': {
         const el = $('#hausX');
         flug(`×${fmtX(s.v)}`, 'x', el ?? fB);
@@ -871,10 +921,13 @@ async function spielen() {
   if (anteil >= 0.35) schuetteln(anteil);
   A.applaus(Math.min(1, 0.25 + anteil * 0.7));
   if (anteil >= 0.6) FX.rosen(Math.min(1, anteil * 0.6));
-  const ovation = erg.gewonnen && run.bravo?.ovation;
-  if (ovation) {
-    banner(`<span class="b-klein">Doppeltes Ziel</span><span class="b-gross">Standing Ovations!</span><span class="b-x">${PROGRAMME[ovation].name}: Stufe ${run.stufen[ovation]}</span>`, 1900);
+  if (erg.ovation) {
+    banner(`<span class="b-klein">Zugabe</span><span class="b-gross">Standing Ovations!</span><span class="b-x">${PROGRAMME[erg.ovation].name}: Stufe ${run.stufen[erg.ovation]}</span>`, 1900);
     FX.konfetti(90);
+  } else if (erg.verpufft) {
+    banner(`<span class="b-klein">Zugabe</span><span class="b-gross">Das Publikum geht</span><span class="b-neu">Nicht mehr als ${fmt(besteVorher)} – der Vorhang fällt.</span>`, 1700);
+  } else if (erg.erreicht && !erg.gewonnen) {
+    banner('<span class="b-klein">Ziel erreicht</span><span class="b-gross">Bravo!</span><span class="b-neu">Vorhang – oder eine Zugabe wagen?</span>', 1600);
   } else if (erg.gesamt >= zielVorher) banner('<span class="b-klein">In einer einzigen Vorstellung</span><span class="b-gross">Bravissimo!</span>', 1500);
   buehne.innerHTML = '';
   await warte(250);
@@ -920,6 +973,25 @@ async function spielen() {
   renderAktionen();
 }
 
+function zeigeBravo() {
+  auswahl.clear();
+  FX.rosen(0.8);
+  A.applaus(1, 3.4);
+  renderHud();
+  renderEnsemble();
+  renderMitte();
+  renderHand();
+  renderAktionen();
+  bravoAnimieren();
+  pruefeMeta();
+  speichern();
+}
+
+function vorhangFallen() {
+  if (busy || !run?.round?.erreicht) return;
+  if (L.vorhang(run)) zeigeBravo();
+}
+
 async function umbesetzen() {
   if (busy || !run?.round || !auswahl.size || run.round.umbes <= 0) return;
   A.init();
@@ -932,7 +1004,8 @@ async function umbesetzen() {
   auswahl.clear();
   busy = false;
   if (!erg) { renderHand(); return; }
-  if (erg.verloren) { A.niederlage(); speichern(); laufBeendet(false); return; }
+  if (erg.ende === 'verloren') { A.niederlage(); speichern(); laufBeendet(false); return; }
+  if (erg.ende === 'gewonnen') { zeigeBravo(); return; }
   renderHud();
   renderHand(erg.neu);
   A.austeilen(erg.neu.length);
@@ -1386,7 +1459,10 @@ function zeigeAnleitung() {
         <li><b>Applaus = Publikum × Begeisterung.</b> Das Programm (siehe unten) gibt die Grundwerte, jedes gezählte Werk bringt seinen <span class="t-p">Ruhm</span> als Publikum dazu.</li>
         <li>Du hast vier <b>Vorstellungen</b> und drei <b>Umbesetzungen</b> (Werke abwerfen und nachziehen).</li>
         <li>Übrige Vorstellungen bringen Dukaten, und je 5 Dukaten auf dem Konto gibt es 1 Dukat Zinsen.</li>
-        <li><b>Standing Ovations:</b> Holst du an einem Abend das Doppelte des Ziels, steigt das Programm deiner besten Vorstellung um eine Stufe. Der Abend endet, sobald das Ziel erreicht ist – es lohnt sich also, auf einen großen Wurf hinzuarbeiten.</li>
+        <li><b>Leitmotiv:</b> Kehrt ein Komponist der letzten Vorstellung wieder, wächst die Kette: ×1,25, ×1,5, ×1,75, höchstens ×2 Begeisterung. Wer ihn fallen lässt, fängt von vorn an – plane deine Hand über mehrere Vorstellungen.</li>
+        <li><b>Souffleurkasten:</b> Die nächsten zwei Werke im Stapel siehst du vorab. So wird Umbesetzen zur Entscheidung, nicht zum Glücksspiel.</li>
+        <li><b>Zugabe:</b> Ist das Ziel erreicht, fällt der Vorhang nicht von selbst. Übrige Vorstellungen bringen je einen Dukaten – oder du gibst eine Zugabe. Eine pro Abend: Übertrifft sie die beste Vorstellung des Abends, gibt es Standing Ovations und ihr Programm steigt eine Stufe. Bleibt sie darunter, geht das Publikum.</li>
+        <li><b>Vorschau:</b> Auf dem Spielplan steht schon der Kritiker der nächsten Station.</li>
       </ul></div>
     <div class="ov-sektion"><h3>Die Programme</h3>
       <table class="tabelle"><tbody>${PROGRAMM_IDS.map((a) => `<tr><td><span class="prog">${PROGRAMME[a].name}</span><span class="regel">${PROGRAMME[a].regel}</span></td><td class="zahl"><span class="t-p">${PROGRAMME[a].p}</span> × <span class="t-b">${PROGRAMME[a].b}</span></td></tr>`).join('')}</tbody></table>
@@ -1452,6 +1528,7 @@ const AKTIONEN = {
   strengeWahl: (el) => { neuWahl.strenge = Number(el.dataset.n); A.klick(); renderNeu(); },
   starten: () => laufStarten({ deck: neuWahl.deck, strenge: neuWahl.strenge }),
   vorhangAuf: () => abendStarten(),
+  vorhang: () => vorhangFallen(),
   spielen: () => spielen(),
   umbesetzen: () => umbesetzen(),
   sortieren: () => {
@@ -1637,6 +1714,7 @@ document.addEventListener('keydown', (e) => {
       if (u != null) auswaehlen(u);
     } else if (e.key === 'Enter') { e.preventDefault(); spielen(); }
     else if (e.key === 'u' || e.key === 'U' || e.key === 'Backspace' || e.key === 'Delete') umbesetzen();
+    else if (e.key === 'v' || e.key === 'V') vorhangFallen();
     else if (e.key === 's' || e.key === 'S') AKTIONEN.sortieren();
     else if (e.key === 'p' || e.key === 'P') zeigeProgramme();
   } else if (e.key === 'Enter') {

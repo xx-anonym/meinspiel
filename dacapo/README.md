@@ -31,9 +31,16 @@ auch offline (Service Worker).
 - Jede Station hat drei Abende: Premiere, Gala und Kritikerabend. Am
   Kritikerabend gilt eine Sonderregel („Der Purist: Werke nach 1900 zählen
   nicht“).
-- **Standing Ovations:** Wer an einem Abend das Doppelte des Ziels holt, dem
-  schreibt die Presse das Programm der besten Vorstellung eine Stufe hoch. Da
-  der Abend mit dem Erreichen des Ziels endet, lohnt sich der große Wurf.
+- **Leitmotiv:** Kehrt ein Komponist der letzten Vorstellung wieder, wächst
+  die Kette – und mit ihr die Begeisterung. Wer ihn fallen lässt, fängt von
+  vorn an. Gute Hände plant man über mehrere Vorstellungen.
+- **Souffleurkasten:** Die nächsten zwei Werke im Stapel sind sichtbar.
+  Umbesetzen wird zur Entscheidung statt zum Glücksspiel.
+- **Zugabe:** Ist das Ziel erreicht, entscheidest du: Vorhang (übrige
+  Vorstellungen bringen Dukaten) oder eine Zugabe – eine pro Abend. Übertrifft sie die beste
+  Vorstellung des Abends, gibt es Standing Ovations und ihr Programm steigt
+  eine Stufe. Bleibt sie darunter, geht das Publikum.
+- **Vorschau:** Der Spielplan nennt schon den Kritiker der nächsten Station.
 - Zwischen den Abenden geht es ins Foyer: Stars engagieren, Rezensionen
   kaufen, Werke proben, Pakete öffnen, investieren – und einmal pro Pause beim
   **Verlag** bestellen: Komponist wählen, eins von drei seiner Werke nehmen,
@@ -78,7 +85,9 @@ Passen mehrere, spielt das Haus die stärkste Lesart.
 - **11 Gutscheine** fürs Absagen und **15 Ereignisse** zwischen den Stationen
 - **16 Sternstunden** zum Entdecken: Ring, Trilogia popolare, Da-Ponte-Trilogie,
   Cav/Pag, Il trittico, „Uraufgeführt in Leipzig“ und mehr
-- **17 Kritiker** plus zwei Finalgegner in Bayreuth
+- **20 Kritiker** plus zwei Finalgegner in Bayreuth – darunter der Denkmalpfleger
+  (kein Festspielhaus), der Chronist (Absagen rächen sich) und die Eklektikerin
+  (Leitmotive verboten)
 - **10 Rezensionen** (LVZ bis Deutschlandfunk Kultur), **11 Proben**, **9 Investitionen**
 - **Das Festspielhaus** als Großprojekt ohne Ende, damit Dukaten nie wertlos werden
 - **7 Startrepertoires** zum Freischalten – zuletzt die **Komische Oper** mit nur

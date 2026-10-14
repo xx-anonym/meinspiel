@@ -109,6 +109,12 @@ export function migrieren(run) {
   run.ereignisseGehabt ??= [];
   run.stats.abgesagt ??= 0;
   if (!run.gutscheinAngebot[run.station]) gutscheineWuerfeln(run);
+  if (run.station % STATIONEN !== 0 || run.endlos) kritikerWuerfeln(run, run.station + 1);
+  if (run.round) {
+    run.round.erreicht ??= false;
+    run.round.ovationen ??= [];
+    run.round.motiv ??= null;
+  }
   return run;
 }
 
@@ -121,6 +127,19 @@ export function haus(station) {
 
 function kritikerWaehlen(run) {
   const st = run.station;
+  kritikerWuerfeln(run, st);
+  // Vorab gewürfelt kann er inzwischen unfair geworden sein (Repertoire geändert).
+  kritikerReparieren(run);
+  // Vorschau: Den Kritiker der nächsten Station kennt man schon – zum Planen.
+  if (st % STATIONEN !== 0 || run.endlos) kritikerWuerfeln(run, st + 1);
+  if (!run.investAngebot[st]) {
+    const pool = INVESTITIONEN.filter((v) => !run.investitionen.includes(v.id));
+    run.investAngebot[st] = pool.length ? pick(run, pool).id : null;
+  }
+  if (!run.gutscheinAngebot[st]) gutscheineWuerfeln(run);
+}
+
+function kritikerWuerfeln(run, st) {
   if (run.kritiker[st]) return;
   if (st % STATIONEN === 0) {
     run.kritiker[st] = pick(run, FINAL_KRITIKER).id;
@@ -134,11 +153,6 @@ function kritikerWaehlen(run) {
     run.kritiker[st] = k;
     run.kritikerGehabt.push(k);
   }
-  if (!run.investAngebot[st]) {
-    const pool = INVESTITIONEN.filter((v) => !run.investitionen.includes(v.id));
-    run.investAngebot[st] = pool.length ? pick(run, pool).id : null;
-  }
-  if (!run.gutscheinAngebot[st]) gutscheineWuerfeln(run);
 }
 
 // Je ein Gutschein für Premiere und Gala, verschieden.
@@ -251,6 +265,7 @@ export function ziel(run, station = run.station, abend = run.abend) {
   const k = station === run.station ? kritikerAktiv(run, abend) : null;
   if (k === 'schlaefer') f = 1;
   if (k === 'gruenerhuegel') f = 4;
+  if (k === 'chronist') f *= 1 + 0.1 * (run.stats.abgesagt || 0);
   return rund(basis * f);
 }
 
@@ -282,7 +297,8 @@ export function starteAbend(run) {
     stapel: mischen(run, run.repertoire.map((c) => c.uid)),
     hand: [], ablage: [], arten: [], verdeckt: {},
     orakel: hatStar(run, 'orakel') ? pick(run, SCHUL_IDS) : null,
-    offStar: null, beste: 0,
+    offStar: null, beste: 0, besteArt: null,
+    erreicht: false, ovationen: [], motiv: null,
   };
   run.round.haende = vorstellungenProAbend(run, k);
   run.round.umbes = umbesetzungenProAbend(run, k);
@@ -670,10 +686,26 @@ export function auffuehren(run, uidsGewaehlt) {
     run.stats.sternstunden[st.id] = (run.stats.sternstunden[st.id] || 0) + 1;
   }
 
-  const hausX = nichtig ? 1 : hausFaktor(run);
+  // Leitmotiv: Kehrt ein Komponist der letzten Vorstellung wieder, wächst die
+  // Kette und mit ihr die Begeisterung. Wer ihn fallen lässt, fängt von vorn an.
+  const motivJetzt = [...new Set(gezaehlt.map(komp))];
+  const kehrtWieder = motivJetzt.some((k) => (r.motiv?.komp || []).includes(k));
+  let kette = 0;
+  if (kehrtWieder && r.kritiker === 'eklektikerin') {
+    B *= 0.5;
+    S({ t: 'motiv', v: 0.5, bruch: true });
+  } else if (kehrtWieder) {
+    kette = Math.min(MOTIV_MAX, (r.motiv?.kette || 0) + 1);
+    B *= motivFaktor(kette);
+    S({ t: 'motiv', v: motivFaktor(kette), kette });
+  }
+  r.motiv = { komp: motivJetzt, kette };
+
+  const hausX = nichtig || r.kritiker === 'denkmal' ? 1 : hausFaktor(run);
   if (hausX > 1) { B *= hausX; S({ t: 'haus', v: hausX }); }
 
   const gesamt = Math.floor(P * B);
+  const zugabeGegen = r.erreicht ? r.beste : null;
 
   // Buchhaltung
   r.punkte += gesamt;
@@ -713,29 +745,82 @@ export function auffuehren(run, uidsGewaehlt) {
     werke: cards.map((c) => c.w), neu: [], gewonnen: false, verloren: false,
   };
 
-  if (r.punkte >= r.ziel) {
+  // Zugabe (eine pro Abend): Übertrifft sie die beste Vorstellung des Abends,
+  // gibt es Standing Ovations und ihr Programm steigt eine Stufe. Danach fällt
+  // der Vorhang so oder so.
+  if (zugabeGegen != null) {
+    if (gesamt > zugabeGegen) {
+      run.stufen[art] += 1;
+      r.ovationen.push(art);
+      run.stats.ovationen = (run.stats.ovationen || 0) + 1;
+      ergebnis.ovation = art;
+    } else ergebnis.verpufft = true;
+  }
+  if (!r.erreicht && r.punkte >= r.ziel) { r.erreicht = true; ergebnis.erreicht = true; }
+
+  if (r.erreicht && (zugabeGegen != null || r.haende <= 0)) {
     ergebnis.gewonnen = true;
     abendGewonnen(run);
-  } else if (r.haende <= 0) {
+  } else if (!r.erreicht && r.haende <= 0) {
     ergebnis.verloren = true;
     run.phase = 'vorhang';
     run.stats.ende = { station: run.station, abend: run.abend, kritiker: r.kritiker, punkte: r.punkte, ziel: r.ziel };
   } else {
     ergebnis.neu = ziehen(run);
     if (r.kritiker === 'primadonna') primadonnaWuerfeln(run);
-    if (erschoepft(run)) ergebnis.verloren = true;
+    const ende = erschoepft(run);
+    if (ende === 'gewonnen') ergebnis.gewonnen = true;
+    if (ende === 'verloren') ergebnis.verloren = true;
   }
   return ergebnis;
+}
+
+/** Ziel erreicht und keine Zugabe mehr: der Vorhang fällt, es gibt Gage. */
+export function vorhang(run) {
+  if (run.phase !== 'abend' || !run.round?.erreicht) return false;
+  abendGewonnen(run);
+  return true;
+}
+
+export const MOTIV_SCHRITT = 0.25;
+export const MOTIV_MAX = 4;
+export const motivFaktor = (kette) => 1 + MOTIV_SCHRITT * Math.min(kette, MOTIV_MAX);
+
+/**
+ * Leitmotiv für die Anzeige: wer zuletzt erklang, wie lang die Kette ist, und –
+ * mit einer Auswahl – was sie bewirken würde (Faktor, 0,5 bei der
+ * Eklektikerin, oder null, wenn die Kette reißt).
+ */
+export function leitmotiv(run, uids = null) {
+  const r = run.round;
+  const komponisten = r?.motiv?.komp || [];
+  const kette = r?.motiv?.kette || 0;
+  let wirkung;
+  if (uids?.length && komponisten.length) {
+    const pr = pruefeAuswahl(run, uids);
+    const zaehlen = pr.ok && !pr.nichtig ? pr.ev.zaehlen.filter((c) => !zaehltNicht(run, c)) : [];
+    const trifft = zaehlen.some((c) => komponisten.includes(komp(c)));
+    wirkung = !trifft ? null : r.kritiker === 'eklektikerin' ? 0.5 : motivFaktor(kette + 1);
+  }
+  return { komponisten, kette, faktor: motivFaktor(kette), naechster: motivFaktor(kette + 1), wirkung };
+}
+
+/** Die nächsten Werke im Stapel (der Souffleurkasten). Das Regieteam hält ihn zu. */
+export function souffleur(run, n = 2) {
+  const r = run.round;
+  if (!r || r.kritiker === 'regie') return null;
+  return r.stapel.slice(-n).reverse().map((u) => karte(run, u));
 }
 
 // Kein Werk mehr in der Hand und keins mehr im Stapel: Es lässt sich nichts
 // mehr aufführen, der Vorhang fällt. (Kleine Repertoires, Huster, Streichungen.)
 function erschoepft(run) {
   const r = run.round;
-  if (r.hand.length || r.stapel.length) return false;
+  if (r.hand.length || r.stapel.length) return null;
+  if (r.erreicht) { abendGewonnen(run); return 'gewonnen'; }
   run.phase = 'vorhang';
   run.stats.ende = { station: run.station, abend: run.abend, kritiker: r.kritiker, punkte: r.punkte, ziel: r.ziel, leer: true };
-  return true;
+  return 'verloren';
 }
 
 export function umbesetzen(run, uidsGewaehlt) {
@@ -748,7 +833,7 @@ export function umbesetzen(run, uidsGewaehlt) {
   r.ablage.push(...uids);
   for (const u of uids) delete r.verdeckt[u];
   const neu = ziehen(run);
-  return { uids, neu, verloren: erschoepft(run) };
+  return { uids, neu, ende: erschoepft(run) };
 }
 
 // ------------------------------------------------------------------ Abendende
@@ -787,24 +872,13 @@ function abendGewonnen(run) {
 
   run.stats.abende += 1;
   const sieg = run.station === STATIONEN && run.abend === 2 && !run.endlos;
-  // Standing Ovations: Wer am Abend das Doppelte des Ziels holt, dem schreibt
-  // die Presse das Programm der besten Vorstellung eine Stufe hoch.
-  const ovation = ovationen(run);
-  if (ovation) {
-    run.stufen[ovation] += 1;
-    run.stats.ovationen = (run.stats.ovationen || 0) + 1;
-    ereignisse.unshift({ text: `Standing Ovations! Die Presse feiert deinen ${PROGRAMME[ovation].name}: Stufe ${run.stufen[ovation]}.`, art: 'gut' });
+  const ovationen = [...(r.ovationen || [])];
+  if (ovationen.length) {
+    const namen = ovationen.map((a) => `${PROGRAMME[a].name} (Stufe ${run.stufen[a]})`).join(', ');
+    ereignisse.unshift({ text: `Standing Ovations für ${ovationen.length === 1 ? 'die Zugabe' : `${ovationen.length} Zugaben`}: ${namen}.`, art: 'gut' });
   }
-  run.bravo = { zeilen, ereignisse, summe: zeilen.reduce((s, z) => s + z.v, 0), punkte: r.punkte, ziel: r.ziel, sieg, ovation };
+  run.bravo = { zeilen, ereignisse, summe: zeilen.reduce((s, z) => s + z.v, 0), punkte: r.punkte, ziel: r.ziel, sieg, ovationen };
   run.phase = 'bravo';
-}
-
-export const OVATION_FAKTOR = 2;
-/** Gibt das Programm zurück, das für Standing Ovations aufsteigt, sonst null. */
-export function ovationen(run) {
-  const r = run.round;
-  if (!r || r.punkte < OVATION_FAKTOR * r.ziel) return null;
-  return r.besteArt || r.arten[r.arten.length - 1] || null;
 }
 
 export function kassieren(run) {

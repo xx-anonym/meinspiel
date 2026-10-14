@@ -272,6 +272,23 @@ b { font-weight: 700; }
   font-weight: 700; font-size: clamp(.85rem, 3.4vw, 1rem); font-variant-numeric: tabular-nums;
 }
 .haus-x .ic { width: 1.15em; height: 1.15em; }
+.stage-leiste { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; min-height: 1.6em; }
+.stage-leiste:empty { display: none; }
+.leiste-chip {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 100%; font-size: .76rem; line-height: 1.2; color: var(--text-m);
+  background: rgba(0, 0, 0, .32); border: 1px solid rgba(255, 255, 255, .1); border-radius: 999px; padding: 2px 10px 2px 7px;
+}
+.leiste-chip .ic { width: 1.1em; height: 1.1em; flex: none; color: var(--gold); }
+.leiste-chip b { color: var(--text); font-weight: 600; }
+.leiste-chip.leer { opacity: .6; }
+.leiste-chip.an { border-color: var(--gold-h); color: var(--gold-h); box-shadow: 0 0 12px rgba(236, 210, 127, .25); }
+.leiste-chip.an b { color: var(--gold-h); }
+.leiste-chip.warn { border-color: rgba(255, 120, 110, .5); color: #ffb4aa; }
+.btn-vorhang { flex-direction: column; gap: 0; line-height: 1.15; }
+.btn-vorhang small { font-size: .78rem; }
+.sp-vorschau { display: flex; align-items: flex-start; gap: 6px; font-size: .82rem; margin: 0; }
+.sp-vorschau .ic { width: 1.2em; height: 1.2em; flex: none; color: var(--gold); margin-top: 1px; }
+.sp-vorschau b { color: #ffd3cd; }
 .gesamt { font-family: var(--f-disp); font-weight: 900; font-size: clamp(1.8rem, 9vw, 3rem); color: var(--gold-h); min-height: 0; line-height: 1; text-shadow: 0 0 24px rgba(236, 210, 127, .5); }
 .gesamt:empty { display: none; }
 .gespielt { display: flex; gap: 8px; justify-content: center; min-height: 0; --kw: var(--kw-stage, 96px); }
@@ -436,9 +453,10 @@ b { font-weight: 700; }
 .sp-gutschein:hover { border-color: var(--gold-h); color: var(--text); }
 @media (max-width: 420px) {
   .sp-gutschein .ic { display: none; }
-  .sp-gutschein { padding: 4px 6px; overflow-wrap: anywhere; }
+  .sp-gutschein { padding: 4px 6px; overflow-wrap: break-word; }
 }
-.sp-gutschein-vorschau { margin-top: 4px; display: flex; align-items: center; gap: 5px; font-size: .74rem; color: var(--text-d); }
+.sp-gutschein-vorschau { margin-top: 4px; display: flex; align-items: center; gap: 5px; font-size: .74rem; color: var(--text-d); min-width: 0; overflow-wrap: break-word; }
+.sp-regel b { overflow-wrap: break-word; }
 .sp-mods { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 .sp-mods li { font-size: .78rem; color: #cfe2fa; background: rgba(34, 50, 74, .55); border: 1px solid rgba(143, 183, 230, .35); border-radius: 999px; padding: 2px 10px; }
 
