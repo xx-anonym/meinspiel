@@ -1,6 +1,6 @@
 // Balance-Simulation: Wie oft lässt sich welches Programm aus acht Karten
 // bilden, und wie weit kommt ein gieriger Bot?
-//   node tools/sim.mjs [deck] [läufe] [ohne-haus]
+//   node tools/sim.mjs [deck] [läufe] [ohne-haus|mit-haus] [ohne-zugabe]
 import * as L from '../js/logic.js';
 import { PROGRAMME, PROGRAMM_IDS, STAR } from '../js/data.js';
 
@@ -8,6 +8,8 @@ const deck = process.argv[2] || 'leipzig';
 const N = Number(process.argv[3] || 300);
 // Mit „ohne-haus“ als drittem Argument baut der Bot kein Festspielhaus.
 const bauen = process.argv[4] !== 'ohne-haus';
+// Mit „ohne-zugabe“ als viertem Argument fällt nach erreichtem Ziel sofort der Vorhang.
+const zugaben = process.argv[5] !== 'ohne-zugabe';
 
 function teilmengen(arr, max = 5) {
   const out = [];
@@ -67,6 +69,12 @@ function botAbend(run) {
   const r = run.round;
   while (run.phase === 'abend') {
     const b = besteAuswahl(run);
+    // Ziel erreicht: Zugabe nur, wenn sie die beste Vorstellung übertrifft.
+    if (r.erreicht) {
+      if (zugaben && b && b.wert > r.beste) L.auffuehren(run, b.uids);
+      else L.vorhang(run);
+      continue;
+    }
     const noetig = (r.ziel - r.punkte) / r.haende;
     if (b && (b.wert >= noetig || r.umbes === 0 || r.haende === 1 && b.wert >= r.ziel - r.punkte)) {
       L.auffuehren(run, b.uids);

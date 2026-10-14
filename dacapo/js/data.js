@@ -418,14 +418,14 @@ export const FESTSPIELHAUS = {
 export const GUTSCHEINE = [
   { id: 'freikarten', name: 'Freikarten', text: 'Im nächsten Foyer ist das erste Paket gratis.' },
   { id: 'talentscout', name: 'Talentscout', text: 'Im nächsten Foyer steht zusätzlich ein Solist oder eine Legende.' },
-  { id: 'heft', name: 'Spielzeitheft', text: 'Sofort: Wähle eins von drei Werken – alle veredelt.' },
-  { id: 'mappe', name: 'Probenmappe', text: 'Sofort: Wähle eine von drei Proben.' },
-  { id: 'agentur', name: 'Künstleragentur', text: 'Sofort: Wähle einen von zwei Stars.' },
-  { id: 'pressekonferenz', name: 'Pressekonferenz', text: 'Dein meistgespieltes Programm steigt um zwei Stufen.' },
-  { id: 'zuschuss', name: 'Kulturzuschuss', text: '{g:+12 Dukaten}.' },
-  { id: 'denkmal', name: 'Denkmalschutz', text: 'Der nächste Bauabschnitt des Festspielhauses kostet die Hälfte.' },
+  { id: 'heft', name: 'Spielzeit\u00adheft', text: 'Sofort: Wähle eins von drei Werken – alle veredelt.' },
+  { id: 'mappe', name: 'Proben\u00admappe', text: 'Sofort: Wähle eine von drei Proben.' },
+  { id: 'agentur', name: 'Künstler\u00adagentur', text: 'Sofort: Wähle einen von zwei Stars.' },
+  { id: 'pressekonferenz', name: 'Presse\u00adkonferenz', text: 'Dein meistgespieltes Programm steigt um zwei Stufen.' },
+  { id: 'zuschuss', name: 'Kultur\u00adzuschuss', text: '{g:+12 Dukaten}.' },
+  { id: 'denkmal', name: 'Denkmal\u00adschutz', text: 'Der nächste Bauabschnitt des Festspielhauses kostet die Hälfte.' },
   { id: 'ausgeruht', name: 'Ausgeruhtes Ensemble', text: 'Am nächsten Abend: +1 Vorstellung und +1 Umbesetzung.' },
-  { id: 'urauffuehrung', name: 'Uraufführung', text: 'Ein zufälliges Werk kommt als Festspielfassung ({x:×1,5 Begeisterung}) ins Repertoire.' },
+  { id: 'urauffuehrung', name: 'Ur\u00adaufführung', text: 'Ein zufälliges Werk kommt als Festspielfassung ({x:×1,5 Begeisterung}) ins Repertoire.' },
   { id: 'pressefreund', name: 'Freund im Feuilleton', text: 'Am Kritikerabend dieser Station gilt die Regel des Kritikers nicht.', keinFinale: true },
 ];
 export const GUTSCHEIN = Object.fromEntries(GUTSCHEINE.map((g) => [g.id, g]));
@@ -433,12 +433,12 @@ export const GUTSCHEIN = Object.fromEntries(GUTSCHEINE.map((g) => [g.id, g]));
 // Kritiker: die Herrschaften am dritten Abend jeder Station.
 export const KRITIKER = [
   { id: 'purist', name: 'Der Purist', regel: 'Werke nach 1900 zählen nicht.' },
-  { id: 'avantgarde', name: 'Die Avantgardistin', regel: 'Werke vor 1850 zählen nicht.' },
+  { id: 'avantgarde', name: 'Die Avant\u00adgardistin', regel: 'Werke vor 1850 zählen nicht.' },
   { id: 'mailand', name: 'Der Kritiker aus Mailand', regel: 'Deutsche Werke zählen nicht.' },
   { id: 'huegel', name: 'Der Kritiker vom Hügel', regel: 'Italienische Werke zählen nicht.' },
   { id: 'strenge', name: 'Die Strenge', regel: 'Jede Vorstellung muss genau fünf Werke umfassen.' },
   { id: 'gelangweilt', name: 'Der Gelangweilte', regel: 'Kein Programm darf zweimal gespielt werden.' },
-  { id: 'feuilleton', name: 'Der Feuilletonist', regel: 'Grundwerte von Publikum und Begeisterung sind halbiert.' },
+  { id: 'feuilleton', name: 'Der Feuille\u00adtonist', regel: 'Grundwerte von Publikum und Begeisterung sind halbiert.' },
   { id: 'huster', name: 'Der Huster', regel: 'Nach jeder Vorstellung fliegen zwei zufällige Werke aus der Hand.' },
   { id: 'sparkommissar', name: 'Der Sparkommissar', regel: 'Jedes gespielte Werk kostet 1 Dukat.' },
   { id: 'ungeduld', name: 'Die Ungeduldige', regel: 'Keine Umbesetzungen.' },
@@ -446,9 +446,12 @@ export const KRITIKER = [
   { id: 'regie', name: 'Das Regieteam', regel: 'Jedes vierte Werk wird verdeckt gezogen.' },
   { id: 'kurzsichtig', name: 'Der Kurzsichtige', regel: '−1 Handgröße.' },
   { id: 'pedant', name: 'Der Pedant', regel: 'Jede Vorstellung senkt die Stufe des gespielten Programms um 1.' },
-  { id: 'abonnentin', name: 'Die Stammabonnentin', regel: 'Nur eine Art Programm pro Abend.' },
+  { id: 'abonnentin', name: 'Die Stamm\u00adabonnentin', regel: 'Nur eine Art Programm pro Abend.' },
   { id: 'wagnerianer', name: 'Der Wagnerianer', regel: 'Werke mit weniger als drei Akten zählen nicht.' },
   { id: 'moralist', name: 'Der Moralist', regel: 'Heitere Werke zählen nicht.' },
+  { id: 'denkmal', name: 'Der Denkmal\u00adpfleger', regel: 'Das Festspielhaus wirkt heute nicht.' },
+  { id: 'chronist', name: 'Der Chronist', regel: 'Das Ziel steigt um 10 % für jeden abgesagten Abend dieser Spielzeit.' },
+  { id: 'eklektikerin', name: 'Die Eklek\u00adtikerin', regel: 'Kehrt ein Komponist der letzten Vorstellung wieder, gibt es ×0,5 Begeisterung statt eines Leitmotivs.' },
 ];
 export const FINAL_KRITIKER = [
   { id: 'gruenerhuegel', name: 'Der Grüne Hügel', regel: 'Das Ziel ist doppelt so hoch.', finale: true },
@@ -476,7 +479,7 @@ export const GASTSPIELE = [
   { id: 'koeln', name: 'Oper Köln', stadt: 'Köln', lat: 50.938, lon: 6.958, notiz: 'Gastspiel am Offenbachplatz.' },
 ];
 // Zielwerte des ersten Abends je Station (wie die Antes bei Balatro).
-export const ZIELE = [300, 800, 1800, 4200, 9000, 17000, 30000, 48000];
+export const ZIELE = [300, 1000, 2300, 5400, 11700, 22000, 39000, 62000];
 export const ABENDE = [
   { name: 'Premiere', faktor: 1, gage: 3 },
   { name: 'Gala', faktor: 1.5, gage: 4 },
