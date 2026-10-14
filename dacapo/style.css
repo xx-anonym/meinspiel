@@ -284,8 +284,6 @@ b { font-weight: 700; }
 .leiste-chip.an { border-color: var(--gold-h); color: var(--gold-h); box-shadow: 0 0 12px rgba(236, 210, 127, .25); }
 .leiste-chip.an b { color: var(--gold-h); }
 .leiste-chip.warn { border-color: rgba(255, 120, 110, .5); color: #ffb4aa; }
-.btn-vorhang { flex-direction: column; gap: 0; line-height: 1.15; }
-.btn-vorhang small { font-size: .78rem; }
 .sp-vorschau { display: flex; align-items: flex-start; gap: 6px; font-size: .82rem; margin: 0; }
 .sp-vorschau .ic { width: 1.2em; height: 1.2em; flex: none; color: var(--gold); margin-top: 1px; }
 .sp-vorschau b { color: #ffd3cd; }

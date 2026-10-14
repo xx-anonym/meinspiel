@@ -36,10 +36,9 @@ auch offline (Service Worker).
   vorn an. Gute Hände plant man über mehrere Vorstellungen.
 - **Souffleurkasten:** Die nächsten zwei Werke im Stapel sind sichtbar.
   Umbesetzen wird zur Entscheidung statt zum Glücksspiel.
-- **Zugabe:** Ist das Ziel erreicht, entscheidest du: Vorhang (übrige
-  Vorstellungen bringen Dukaten) oder eine Zugabe – eine pro Abend. Übertrifft sie die beste
-  Vorstellung des Abends, gibt es Standing Ovations und ihr Programm steigt
-  eine Stufe. Bleibt sie darunter, geht das Publikum.
+- **Standing Ovations:** Holt ein Abend das Doppelte des Ziels, steigt das
+  Programm der besten Vorstellung eine Stufe. Da der Abend mit dem Erreichen
+  des Ziels endet, lohnt sich der große Wurf.
 - **Vorschau:** Der Spielplan nennt schon den Kritiker der nächsten Station.
 - Zwischen den Abenden geht es ins Foyer: Stars engagieren, Rezensionen
   kaufen, Werke proben, Pakete öffnen, investieren – und einmal pro Pause beim
