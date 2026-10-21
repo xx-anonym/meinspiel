@@ -111,9 +111,9 @@ export function migrieren(run) {
   if (!run.gutscheinAngebot[run.station]) gutscheineWuerfeln(run);
   if (run.station % STATIONEN !== 0 || run.endlos) kritikerWuerfeln(run, run.station + 1);
   if (run.round) {
-    run.round.erreicht ??= false;
-    run.round.ovationen ??= [];
     run.round.motiv ??= null;
+    // Gespeichert, während noch zwischen Vorhang und Zugabe gewählt wurde.
+    if (run.phase === 'abend' && run.round.punkte >= run.round.ziel) abendGewonnen(run);
   }
   return run;
 }
@@ -298,7 +298,7 @@ export function starteAbend(run) {
     hand: [], ablage: [], arten: [], verdeckt: {},
     orakel: hatStar(run, 'orakel') ? pick(run, SCHUL_IDS) : null,
     offStar: null, beste: 0, besteArt: null,
-    erreicht: false, ovationen: [], motiv: null,
+    motiv: null,
   };
   run.round.haende = vorstellungenProAbend(run, k);
   run.round.umbes = umbesetzungenProAbend(run, k);
@@ -705,7 +705,6 @@ export function auffuehren(run, uidsGewaehlt) {
   if (hausX > 1) { B *= hausX; S({ t: 'haus', v: hausX }); }
 
   const gesamt = Math.floor(P * B);
-  const zugabeGegen = r.erreicht ? r.beste : null;
 
   // Buchhaltung
   r.punkte += gesamt;
@@ -745,23 +744,10 @@ export function auffuehren(run, uidsGewaehlt) {
     werke: cards.map((c) => c.w), neu: [], gewonnen: false, verloren: false,
   };
 
-  // Zugabe (eine pro Abend): Übertrifft sie die beste Vorstellung des Abends,
-  // gibt es Standing Ovations und ihr Programm steigt eine Stufe. Danach fällt
-  // der Vorhang so oder so.
-  if (zugabeGegen != null) {
-    if (gesamt > zugabeGegen) {
-      run.stufen[art] += 1;
-      r.ovationen.push(art);
-      run.stats.ovationen = (run.stats.ovationen || 0) + 1;
-      ergebnis.ovation = art;
-    } else ergebnis.verpufft = true;
-  }
-  if (!r.erreicht && r.punkte >= r.ziel) { r.erreicht = true; ergebnis.erreicht = true; }
-
-  if (r.erreicht && (zugabeGegen != null || r.haende <= 0)) {
+  if (r.punkte >= r.ziel) {
     ergebnis.gewonnen = true;
     abendGewonnen(run);
-  } else if (!r.erreicht && r.haende <= 0) {
+  } else if (r.haende <= 0) {
     ergebnis.verloren = true;
     run.phase = 'vorhang';
     run.stats.ende = { station: run.station, abend: run.abend, kritiker: r.kritiker, punkte: r.punkte, ziel: r.ziel };
@@ -773,13 +759,6 @@ export function auffuehren(run, uidsGewaehlt) {
     if (ende === 'verloren') ergebnis.verloren = true;
   }
   return ergebnis;
-}
-
-/** Ziel erreicht und keine Zugabe mehr: der Vorhang fällt, es gibt Gage. */
-export function vorhang(run) {
-  if (run.phase !== 'abend' || !run.round?.erreicht) return false;
-  abendGewonnen(run);
-  return true;
 }
 
 export const MOTIV_SCHRITT = 0.25;
@@ -817,7 +796,6 @@ export function souffleur(run, n = 2) {
 function erschoepft(run) {
   const r = run.round;
   if (r.hand.length || r.stapel.length) return null;
-  if (r.erreicht) { abendGewonnen(run); return 'gewonnen'; }
   run.phase = 'vorhang';
   run.stats.ende = { station: run.station, abend: run.abend, kritiker: r.kritiker, punkte: r.punkte, ziel: r.ziel, leer: true };
   return 'verloren';
@@ -872,14 +850,19 @@ function abendGewonnen(run) {
 
   run.stats.abende += 1;
   const sieg = run.station === STATIONEN && run.abend === 2 && !run.endlos;
-  const ovationen = [...(r.ovationen || [])];
-  if (ovationen.length) {
-    const namen = ovationen.map((a) => `${PROGRAMME[a].name} (Stufe ${run.stufen[a]})`).join(', ');
-    ereignisse.unshift({ text: `Standing Ovations für ${ovationen.length === 1 ? 'die Zugabe' : `${ovationen.length} Zugaben`}: ${namen}.`, art: 'gut' });
+  // Standing Ovations: Holt der Abend das Doppelte des Ziels, schreibt die
+  // Presse das Programm der besten Vorstellung eine Stufe hoch.
+  const ovation = r.punkte >= OVATION_FAKTOR * r.ziel ? r.besteArt || r.arten[r.arten.length - 1] : null;
+  if (ovation) {
+    run.stufen[ovation] += 1;
+    run.stats.ovationen = (run.stats.ovationen || 0) + 1;
+    ereignisse.unshift({ text: `Standing Ovations! Die Presse feiert deinen ${PROGRAMME[ovation].name}: Stufe ${run.stufen[ovation]}.`, art: 'gut' });
   }
-  run.bravo = { zeilen, ereignisse, summe: zeilen.reduce((s, z) => s + z.v, 0), punkte: r.punkte, ziel: r.ziel, sieg, ovationen };
+  run.bravo = { zeilen, ereignisse, summe: zeilen.reduce((s, z) => s + z.v, 0), punkte: r.punkte, ziel: r.ziel, sieg, ovation };
   run.phase = 'bravo';
 }
+
+export const OVATION_FAKTOR = 2;
 
 export function kassieren(run) {
   if (run.phase !== 'bravo' || !run.bravo) return;

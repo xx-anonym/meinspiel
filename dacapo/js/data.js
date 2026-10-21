@@ -479,7 +479,7 @@ export const GASTSPIELE = [
   { id: 'koeln', name: 'Oper Köln', stadt: 'Köln', lat: 50.938, lon: 6.958, notiz: 'Gastspiel am Offenbachplatz.' },
 ];
 // Zielwerte des ersten Abends je Station (wie die Antes bei Balatro).
-export const ZIELE = [300, 1000, 2300, 5400, 11700, 22000, 39000, 62000];
+export const ZIELE = [300, 900, 2100, 4800, 10500, 19500, 34500, 55000];
 export const ABENDE = [
   { name: 'Premiere', faktor: 1, gage: 3 },
   { name: 'Gala', faktor: 1.5, gage: 4 },
